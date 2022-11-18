@@ -15,15 +15,12 @@ zgamma = function(x, mu, sigma, p){
 }
 
 
-zbeta_scalar = function(x, shape1, shape2, p1, p2){
+zbeta_scalar = function(x, shape1, shape2, p){
   if(x == 0){
-    return(p1)
-  }
-  if(x == 1){
-    return(p2)
+    return(p)
   }
   else{
-    return((1-p1-p2)*dbeta(x, shape1 = shape1, shape2 = shape2))
+    return((1-p)*dbeta(x, shape1 = shape1, shape2 = shape2))
   }
 }
 
