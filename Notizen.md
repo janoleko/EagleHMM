@@ -15,3 +15,22 @@
 Challenges of the data: 30 Second intervals of 1 Hz data then 15 Minutes (900 seconds) breaks
 As basically no state switching was observed within intervals we decided to compute summary statistics for each interval.
 
+## Preprocessing & understanding the data
+
+To understand the behaviour of the eagle we visualized the coordinates as well as the height movement patterns for each ~ 250-300 intervals.
+
+We came up with 3 to 4 clearly distinguishable behaviours which the HMM could capture with 3 or 4 states:
+
+* Soaring: The coordinate plots show circles and the height plot shows upward movement
+* Gliding: The coordinate plot shows fast and directed movement while the height plot shows either downwards movement or no change in altitude. This could be captured in one or two states?
+* Resting: The coordinate plot shows little movement with a rather random pattern while the height plot shows barely any changes in height.
+
+
+### Summary statistics
+
+* Step lenght/ speed: Mean --> Gamma distributed
+* Turning angle: abs(mean())/pi --> from von Mises distr. to beta distribution
+* Height first difference: Mean --> normally distributed
+
+
+## Model formulation

@@ -4,6 +4,7 @@ library(tidyverse)
 # Load in the data --------------------------------------------------------
 setwd("/Users/jan-ole/R/HMM Project")
 ider = read.csv("Ider_annotated.csv")
+colnames(ider)
 
 ider$height.fd = c(NA, diff(ider$height.above.msl))
 
