@@ -34,3 +34,5 @@ We came up with 3 to 4 clearly distinguishable behaviours which the HMM could ca
 
 
 ## Model formulation
+
+3D-time series
