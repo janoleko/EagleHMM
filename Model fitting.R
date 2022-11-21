@@ -56,12 +56,34 @@ theta.star0 = c(log(theta0[1:18]),
                 theta0[22:24], 
                 log(theta0[25:27]))
 
+theta0.2 = c(rep(0.05, 6),
+           10, 16, 0.3, # mu.gamma
+           4, 6, 0.2, # sigma.gamma
+           10, 1, 0.5, # alphas
+           55, 40, 1.5, # betas
+           0.01, 0.05, 0.05, # zero masses
+           1, -0.5, 0, # mu
+           1, 1, 0.1) # sigma
+
+theta.star0.2 = c(log(theta0[1:18]),
+                qlogis(theta0[19:21]),
+                theta0[22:24], 
+                log(theta0[25:27]))
+
+
 data2$height.fd[which(abs(data2$height.fd) > 20)] = NA
 data2$angle[which(data2$angle == 1)] = .99 # Wir brauchen zero und one inflated beta Verteilung??
 
 t1 = Sys.time()
 mod = nlm(f = mllk, p = theta.star0, X = data2, N = 3, print.level = 2, iterlim = 1000)
 Sys.time()-t1
+
+t1 = Sys.time()
+mod2 = nlm(f = mllk, p = theta.star0.2, X = data2, N = 3, print.level = 2, iterlim = 1000)
+Sys.time()-t1
+
+-mllk(mod$estimate, X = data2, N = 3)
+-mllk(mod2$estimate, X = data2, N = 3) # same Maximum
 
 theta.star = mod$estimate
 
@@ -89,24 +111,24 @@ sigma = exp(theta.star[(N-1)*N+6*N+1:N]) # sds of normal distributions
 
 # Checking for global optimum ---------------------------------------------
 
-llk = rep(NA, 30)
-mods = vector("list")
-for (k in 1:30){
-  r_theta0 = theta0.3 = c(runif(6, 0, 0.5),
-                          c(9, 16) + runif(2,-5,5), runif(1,0,2),
-                          c(1.5, 4) + runif(2, -1.5, 1.5), runif(1,0,2),
-                          runif(1,5,10), runif(0,3), runif(0,2),
-                          c(55, 40) + runif(2, -20, 20), runif(1,0,4),
-                          runif(3,0,0.2),
-                          c(1, -0.9, 0) + runif(3, -2,2),
-                          runif(3,0,2))
-  r_theta.star0 = c(log(theta0[1:18]),
-                    qlogis(theta0[19:21]),
-                    theta0[22:24], 
-                    log(theta0[25:27]))
-  mods[[k]] = nlm(mllk, r_theta.star0, X = data2, N = 3, iterlim = 300)
-  llks[k] = -mods[[k]]$minimum
-}
+# llk = rep(NA, 30)
+# mods = vector("list")
+# for (k in 1:30){
+#   r_theta0 = theta0.3 = c(runif(6, 0, 0.5),
+#                           c(9, 16) + runif(2,-5,5), runif(1,0,2),
+#                           c(1.5, 4) + runif(2, -1.5, 1.5), runif(1,0,2),
+#                           runif(1,5,10), runif(0,3), runif(0,2),
+#                           c(55, 40) + runif(2, -20, 20), runif(1,0,4),
+#                           runif(3,0,0.2),
+#                           c(1, -0.9, 0) + runif(3, -2,2),
+#                           runif(3,0,2))
+#   r_theta.star0 = c(log(theta0[1:18]),
+#                     qlogis(theta0[19:21]),
+#                     theta0[22:24], 
+#                     log(theta0[25:27]))
+#   mods[[k]] = nlm(mllk, r_theta.star0, X = data2, N = 3, iterlim = 300)
+#   llks[k] = -mods[[k]]$minimum
+# }
 
 
 # Plotting ----------------------------------------------------------------
@@ -138,6 +160,8 @@ curve(
     delta[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3]),
   add = T, lty = "dashed", lwd = 2
 )
+# point masses on 0 and 1 for beta distribution!
+
 
 hist(data2$height.fd, prob = T, breaks = 100, xlab = "Height.fd")
 
@@ -152,9 +176,10 @@ curve(
   add = T, lty = "dashed", lwd = 2, n=1000
 )
 
-
 states = viterbi(mod$estimate, data2, 3)
 
-plot(data2$step[1:3000], pch = 20, col = color[states[1:3000]])
-plot(data2$angle[1:3000], pch = 20, col = color[states[1:3000]])
-plot(data2$height.fd[1:3000], pch = 20, col = color[states[1:3000]])
+par(mfrow = c(3,1))
+plot(data2$step[4700:5000], type = "h", col = color[states[4700:5000]])
+plot(data2$angle[4700:5000], type = "h", col = color[states[4700:5000]])
+plot(data2$height.fd[4700:5000], type = "h", col = color[states[4700:5000]])
+
