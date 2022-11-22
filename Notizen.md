@@ -23,7 +23,7 @@ We came up with 3 to 4 clearly distinguishable behaviours which the HMM could ca
 
 * Soaring: The coordinate plots show circles and the height plot shows upward movement
 * Gliding: The coordinate plot shows fast and directed movement while the height plot shows either downwards movement or no change in altitude. This could be captured in one or two states?
-* Resting: The coordinate plot shows little movement with a rather random pattern while the height plot shows barely any changes in height´ß
+* Resting: The coordinate plot shows little movement with a rather random pattern while the height plot shows barely any changes in height
 
 
 ### Summary statistics
