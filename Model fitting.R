@@ -46,12 +46,12 @@ data2$angle[which(data2$count_angles <= 2)] = NA # set interval with barely any 
 
 # Fitting a model with turning angle --------------------------------------
 
-theta0 = c(rep(0.05, 6),
-           9, 16, 0.3, # mu.gamma
-           1.5, 6, 0.2, # sigma.gamma
+theta0 = c(rep(0.1, 6),
+           9, 13, 0.5, # mu.gamma
+           1.5, 4, 0.4, # sigma.gamma
            10, 1, 0.5, # alphas
            55, 40, 2, # betas
-           0.01, 0.05, 0.05, # zero masses
+           0.01, 0.01, 0.01, # zero masses
            1, -0.5, 0, # mu
            1, 1, 0.1) # sigma
 
@@ -115,7 +115,7 @@ theta.star = mod$estimate
 # theta.star = mod2$estimate
 theta.star = mod4$estimate
 
-N = 4
+N = 3
 
 Gamma = diag(N)
 Gamma[!Gamma] = exp(theta.star[1:((N-1)*N)])
@@ -225,8 +225,6 @@ curve(
   add = T, lty = "dashed", lwd = 2
 )
 
-
-
 hist(data2$height.fd, prob = T, breaks = 100, xlab = "Height.fd", xlim = c(-6,6))
 
 curve(delta[1]*dnorm(x, mu[1], sigma[1]), add = T, lwd = 2, col = color[1])
@@ -272,3 +270,6 @@ for (value in pi_ind){
 
 hist(data2$angle, prob = T, breaks = 50, xlab = "Angle", xlim = c(0,1))
 curve(dbeta(x, shape1 = .5, shape2 = 2), add = T)
+
+hist(data2$step, prob = T, breaks = 200, xlab = "Step length", xlim = c(0,30), ylim = c(0,1.4), main = "Resting")
+curve(dgamma(x, shape = 0.5^2/0.4^2, scale = 0.4^2/0.5), add = T, n = 500)
