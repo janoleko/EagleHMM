@@ -42,3 +42,13 @@ We came up with 3 to 4 clearly distinguishable behaviours which the HMM could ma
 3D-time series: Step length, transformed turning angle, height first difference
 * assuming contemporaneous conditional independence
 * The resulting component distributions are of the form: dgamma * dbeta * dnorm
+* 3 State HMM: 
+  * State 1: Soaring
+  * State 2: Gliding/ flying
+  * State 3: Resting
+* 4 State HMM:
+  * State 1: Soaring
+  * State 2: Gliding
+  * State 3: Resting
+  * State 4: Flapping flight?
+
