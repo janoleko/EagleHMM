@@ -21,21 +21,24 @@ To understand the behaviour of the eagle we visualized the coordinates as well a
 
 We came up with 3 to 4 clearly distinguishable behaviours which the HMM could maybe capture with 3 or 4 states:
 
-* Soaring: The coordinate plots show circular patterns and the height plot shows upward movement
-
-* Gliding: The coordinate plot shows fast and directed movement while the height plot shows either downwards movement or no change in altitude. This could be captured in one or two states?
-* Resting: The coordinate plot shows little movement with a rather random pattern while the height plot shows barely any changes in height
+* Soaring: The coordinate plots show circular patterns and the height plot shows upward movement.
+* Gliding: The coordinate plot shows fast and directed movement while the height plot shows either downwards movement or no change in altitude. This could be captured in one or two states:
+  * Either one state with directed movement and descending as well as some horizontal/ ascending movement,
+  * or two states: One only for descending movement, the other one especially for directed movement ascending.
+* Resting: The coordinate plot shows little movement with a rather random pattern while the height plot shows barely any changes in height.
 
 
 ### Summary statistics
 
-* Step length/ speed: Mean &rarr; Gamma distributed
+* Step length/ speed (in m/s): mean() &rarr; Gamma distributed
 * Turning angle: abs(mean())/pi &rarr; from von Mises distr. to beta distribution
-
   &rarr; Absolute value is used because for the soaring state it does not matter if the turning direction is always left or always right.
-* Height first difference: Mean &rarr; normally distributed
+  * We deleted values where the interval only contained < 3 turning angles as there the mean is not an reliable estimate for the behaviour in the interval, which resulted in significant mass on 0.5 and 1.
+* Height first difference: mean() &rarr; normally distributed
 
 
 ## Model formulation
 
-3D-time series
+3D-time series: Step length, transformed turning angle, height first difference
+* assuming contemporaneous conditional independence
+* The resulting component distributions are of the form: dgamma * dbeta * dnorm
