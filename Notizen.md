@@ -29,7 +29,8 @@ We came up with 3 to 4 clearly distinguishable behaviours which the HMM could ca
 ### Summary statistics
 
 * Step lenght/ speed: Mean &rarr; Gamma distributed
-* Turning angle: abs(mean())/pi &rarr; from von Mises distr. to beta distribution \\
+* Turning angle: abs(mean())/pi &rarr; from von Mises distr. to beta distribution
+
 &rarr; Absolute value is used because for the soaring state it does not matter if the turning direction is always left or always right.
 * Height first difference: Mean &rarr; normally distributed
 
