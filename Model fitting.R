@@ -165,7 +165,7 @@ color = c("deepskyblue", "orange", "forestgreen", "tomato3")
 
 par(mfrow = c(1,1))
 # total
-hist(data2$step, prob = T, breaks = 200, xlab = "Step length", xlim = c(0,30), main = "Resting")
+hist(data2$step, prob = T, breaks = 300, xlab = "Step length", xlim = c(0,30), main = "Resting")
 curve(delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1]), add = T, lwd = 2, col = color[1])
 curve(delta[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2]), add = T, lwd = 2, col = color[2])
 curve(delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3]), add = T, lwd = 2, col = color[3],n = 500)
@@ -176,6 +176,8 @@ curve(
     delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3]),
   add = T, lty = "dashed", lwd = 2, n = 500
 )
+# Mass around zero not captured accurately
+# Maybe 4th state small movements??
 
 hist(data2$angle, prob = T, breaks = 50, xlab = "Angle", xlim = c(0,1))
 curve(delta[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1]), add = T, lwd = 2, col = color[1])
@@ -189,6 +191,19 @@ curve(
   add = T, lty = "dashed", lwd = 2
 )
 # point masses on 0 and 1 for beta distribution!
+
+hist(data2$height.fd, prob = T, breaks = 200, xlab = "Height.fd", xlim = c(-6,6))
+
+curve(delta[1]*dnorm(x, mu[1], sigma[1]), add = T, lwd = 2, col = color[1])
+curve(delta[2]*dnorm(x, mu[2], sigma[2]), add = T, lwd = 2, col = color[2])
+curve(delta[3]*dnorm(x, mu[3], sigma[3]), add = T, lwd = 2, col = color[3],n =1000)
+
+curve(
+  delta[1]*dnorm(x, mu[1], sigma[1])+
+    delta[2]*dnorm(x, mu[2], sigma[2])+
+    delta[3]*dnorm(x, mu[3], sigma[3]),
+  add = T, lty = "dashed", lwd = 2, n=1000
+)
 
 
 # Plotting 4 state HMM ----------------------------------------------------
@@ -240,7 +255,7 @@ curve(
   add = T, lty = "dashed", lwd = 2, n=1000
 )
 
-states = viterbi(mod4$estimate, data2, 4)
+states = viterbi(mod$estimate, data2, 3)
 
 par(mfrow = c(3,1))
 plot(data2$step[3001:6000], type = "h", col = color[states[3001:6000]])
