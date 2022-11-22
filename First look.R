@@ -11,6 +11,7 @@ library(simply3d)
 setwd("/Users/jan-ole/R/HMM Project")
 ider = read.csv("Ider_annotated.csv")
 colnames(ider)
+ider$solar.time[1:1000]
 
 ider$height.fd = c(NA, diff(ider$height.above.msl))
 
