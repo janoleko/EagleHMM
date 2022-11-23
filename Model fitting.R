@@ -40,7 +40,9 @@ data2 = data %>%
             angle = abs(mean(angle, na.rm = T))/pi,
             height.fd = mean(diff(height), na.rm = T),
             x = mean(x, na.rm = T),
-            y = mean(y, na.rm = T))
+            y = mean(y, na.rm = T)) %>% 
+  ungroup()
+# seasonal dummy?
 
 data2$angle[which(data2$count_angles <= 2)] = NA # set interval with barely any values to NA
 
@@ -74,6 +76,21 @@ theta.star0.2 = c(log(theta0[1:18]),
                 theta0[22:24],
                 log(theta0[25:27]))
 
+# theta0.3 = c(rep(0.1, 6),
+#              9, 12, 0.3, # mu.gamma
+#              1.5, 6, 0.2, # sigma.gamma
+#              10, 1, 0.5, # alphas
+#              55, 40, 2, # betas
+#              0.01, 0.01, 0.01, # zero masses
+#              2, -2, 0, # mu
+#              1, 1, 0.1) # sigma
+# 
+# theta.star0.3 = c(log(theta0.3[1:18]),
+#                   qlogis(theta0.3[19:21]),
+#                   log(theta0.3[22]),
+#                   theta0.3[23:24],
+#                   log(theta0.3[25:27]))
+
 ### 4 state HMM? 4-th state is flapping flight -> directed movement but upwards
 
 theta0.4 = c(rep(0.1, 12),
@@ -91,7 +108,27 @@ theta.star0.4 = c(log(theta0.4[1:28]),
                   log(theta0.4[37:40]))
 
 
-data2$height.fd[which(abs(data2$height.fd) > 20)] = NA
+### HMM with covariate temperature
+
+theta0.5 = c(-1.2, -3.27, 0.77, -1.75, -1.15, -0.72, # beta0
+             rep(0, 6), # beta1
+             9, 13, 0.5, # mu.gamma
+             1.5, 4, 0.4, # sigma.gamma
+             10, 1, 0.5, # alphas
+             55, 40, 2, # betas
+             1, -1.8, 0, # mu
+             1, 0.6, 0.1,  # sigma
+             3, 5 # delta
+             )
+theta.star0.5 = c(theta0.5[1:12],
+                  log(theta0.5[13:24]),
+                  theta0.5[25:27],
+                  log(theta0.5[28:32]))
+
+
+
+data2$height.fd[which(data2$height.fd > 20)] = NA
+data2$height.fd[which(data2$height.fd < -110)] = NA
 data2$angle[which(data2$angle == 1)] = runif(length(data2$angle[which(data2$angle == 1)]), 0.95, 1)
 # Wir brauchen zero und one inflated beta Verteilung??
 
@@ -107,9 +144,15 @@ t1 = Sys.time()
 mod4 = nlm(f = mllk, p = theta.star0.4, X = data2, N = 4, print.level = 2, iterlim = 1000)
 Sys.time()-t1
 
--mllk(mod$estimate, X = data2, N = 3)
-# -23738.48
--mllk(mod4$estimate, X = data2, N = 4)
+t1 = Sys.time()
+mod5 = nlm(f = mllk_cov, p = theta.star0.5, X = data2, N = 3, print.level = 2, iterlim = 1000)
+Sys.time()-t1
+
+# AIC:
+2*mllk(mod$estimate, X = data2, N = 3) + 2*27
+# BIC:
+2*mllk(mod$estimate, X = data2, N = 3) + log(nrow(data2))*27
+
 
 theta.star = mod$estimate
 # theta.star = mod2$estimate
@@ -165,7 +208,7 @@ color = c("deepskyblue", "orange", "forestgreen", "tomato3")
 
 par(mfrow = c(1,1))
 # total
-hist(data2$step, prob = T, breaks = 300, xlab = "Step length", xlim = c(0,30), main = "Resting")
+hist(data2$step, prob = T, breaks = 100, xlab = "Step length", xlim = c(0,30), main = "Resting")
 curve(delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1]), add = T, lwd = 2, col = color[1])
 curve(delta[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2]), add = T, lwd = 2, col = color[2])
 curve(delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3]), add = T, lwd = 2, col = color[3],n = 500)
@@ -240,7 +283,7 @@ curve(
   add = T, lty = "dashed", lwd = 2
 )
 
-hist(data2$height.fd, prob = T, breaks = 100, xlab = "Height.fd", xlim = c(-6,6))
+hist(data2$height.fd, prob = T, breaks = 500, xlab = "Height.fd", xlim = c(-5,5))
 
 curve(delta[1]*dnorm(x, mu[1], sigma[1]), add = T, lwd = 2, col = color[1])
 curve(delta[2]*dnorm(x, mu[2], sigma[2]), add = T, lwd = 2, col = color[2])
@@ -258,27 +301,9 @@ curve(
 states = viterbi(mod$estimate, data2, 3)
 
 par(mfrow = c(3,1))
-plot(data2$step[3001:6000], type = "h", col = color[states[3001:6000]])
-plot(data2$angle[3001:6000], type = "h", col = color[states[3001:6000]])
-plot(data2$height.fd[3001:6000], type = "h", col = color[states[3001:6000]])
-
-
-
-# Looking at weird turning angles -----------------------------------------
-
-pi_half_ind = which(data2$angle > 0.49 & data2$angle < 0.51)
-pi_ind = which(data2$angle > 0.97 & data2$angle <= 1)
-
-# Intervalle mit <= 2 Datenpunkten = NA setzen
-for (value in pi_half_ind){
-  print(d$angle[(value-30)+1:30])
-  Sys.sleep(1)
-}
-
-for (value in pi_ind){
-  print(d$angle[(value-30)+1:30])
-  Sys.sleep(1)
-}
+plot(data2$step[10001:10500], type = "h", col = color[states[10001:10500]], ylab = "Step length")
+plot(data2$angle[10001:10500], type = "h", col = color[states[10001:10500]], ylab = "Turning angle")
+plot(data2$height.fd[10001:10500], type = "h", col = color[states][10001:10500], ylab = "Height(fd)")
 
 
 # Getting better starting values for beta distribution --------------------
