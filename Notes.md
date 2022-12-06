@@ -53,7 +53,9 @@ We came up with 3 to 4 clearly distinguishable behaviours which the HMM could ma
   * State 4: Flapping flight?
   
 ## Todo
-* Heading für turning angle benutzen -> first difference
+* Likelihood umschreiben --> jeweils Schleife über Tage
+* Was machen (day Variable ist kacke)?
+* Heading für turning angle benutzen -> first difference (funktioniert nicht (warum?))
 * scatter3D Farben checken
 * landform mit aggregieren und anschauen wie die Beziehung zwischen Decoded states und landform ist: Grundsätzlich gute Idee für ersten Eindruck welche Covariaten interessant sein könnten (Multinomiale Regression)
 * covariaten für transition probs
