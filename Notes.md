@@ -51,4 +51,11 @@ We came up with 3 to 4 clearly distinguishable behaviours which the HMM could ma
   * State 2: Gliding
   * State 3: Resting
   * State 4: Flapping flight?
+  
+## Todo
+* Heading für turning angle benutzen -> first difference
+* scatter3D Farben checken
+* landform mit aggregieren und anschauen wie die Beziehung zwischen Decoded states und landform ist: Grundsätzlich gute Idee für ersten Eindruck welche Covariaten interessant sein könnten (Multinomiale Regression)
+* covariaten für transition probs
+* gemeinsames HMM für mehrere Vögel?
 
