@@ -4,11 +4,13 @@
 library(tidyverse)
 library(moveHMM)
 library(CircStats)
+library(devtools)
+# install_github("janoleko/simply3d)
 library(simply3d)
 
 # Load in the data --------------------------------------------------------
 
-setwd("/Users/jan-ole/R/HMM Project")
+# setwd("/Users/jan-ole/R/HMM Project")
 ider = read.csv("Ider_annotated.csv")
 colnames(ider)
 ider$solar.time[1:1000]
@@ -102,6 +104,23 @@ data_aggr_mean = data %>%
             x = mean(x, na.rm = T),
             y = mean(y, na.rm = T),
             label = mean(label))
+
+data2$angle[which(data2$count_angles <= 2)] = NA # set interval with barely any values to NA
+data2$height.fd[which(data2$height.fd > 20)] = NA
+data2$height.fd[which(data2$height.fd < -110)] = NA
+data2$angle[which(data2$angle == 1)] = runif(length(data2$angle[which(data2$angle == 1)]), 0.95, 1)
+
+
+
+
+# Für Carlina: Nur bis hier ausführen -------------------------------------
+# (Rest kannst du theoretisch löschen)
+
+
+
+
+
+
 
 color = c("cornflowerblue", "orange", "mediumspringgreen", "cyan1")
 
@@ -1398,3 +1417,9 @@ dd$step[which(dd$step>50)] = NA # Ausreißer raus
 for (i in 1:(99)){
   dd$step[30*i] = dd$angle[30*i] = NA
 }
+
+
+
+# Testing Skewed normal distribution --------------------------------------
+
+curve(dsn(x, xi = -1, omega = 1, alpha = -4), xlim = c(-5,5), n = 1000)
