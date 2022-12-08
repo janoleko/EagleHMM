@@ -52,6 +52,11 @@ We came up with 3 to 4 clearly distinguishable behaviours which the HMM could ma
   * State 3: Resting
   * State 4: Flapping flight?
   
+## 4 state HMM with covariates
+* covariate temperature
+* AIC and BIC lower
+* individual likelihood computed for every day (as we only have data between sunset and sunrise)
+  
 ## Todo
 * Likelihood umschreiben --> jeweils Schleife über Tage
 * Was machen (day Variable ist kacke)?
@@ -59,5 +64,6 @@ We came up with 3 to 4 clearly distinguishable behaviours which the HMM could ma
 * scatter3D Farben checken
 * landform mit aggregieren und anschauen wie die Beziehung zwischen Decoded states und landform ist: Grundsätzlich gute Idee für ersten Eindruck welche Covariaten interessant sein könnten (Multinomiale Regression)
 * covariaten für transition probs
+* müssen wir wirklich für ToD immer ganzen Tag haben, ist das nicht egal?
 * gemeinsames HMM für mehrere Vögel?
 
