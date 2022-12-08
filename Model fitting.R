@@ -563,30 +563,56 @@ curve(
   add = T, lty = "dashed", lwd = 2, n=1000
 )
 
-color = c("deepskyblue", "orange", "forestgreen", "blue")
+color = c("deepskyblue", "orange", "springgreen4", "dodgerblue3")
 
 data4 = data2[1:5000,]
 par(mfrow = c(3,1))
-plot(data4$step[1:2000], type = "h", col = color[states[1:2000]], ylab = "Step lenght")
-plot(data4$angle[1:2000], type = "h", col = color[states[1:2000]], ylab = "Turning angle")
-plot(data4$height.fd[1:2000], type = "h", col = color[states[1:2000]], ylab = "Height (fd.)")
+plot(data4$step[1:5000], type = "h", col = color[states[1:5000]], ylab = "Step lenght")
+plot(data4$angle[1:5000], type = "h", col = color[states[1:5000]], ylab = "Turning angle")
+plot(data4$height.fd[1:5000], type = "h", col = color[states[1:5000]], ylab = "Height (fd.)")
 
-min(data4$temp)
-max(data4$temp)
 
 tempseq = seq(min(data4$temp), max(data4$temp), length.out = 500)
 
+# Getting hypothetical stationary distribution and transition prob --------
+
 delta = solve_gamma_na_sn_cov(theta.star, tempseq, N = 4)
+transprobs = get_transprobs(theta.star, tempseq)
+
+# Plotting hypothetical data ----------------------------------------------
 
 par(mfrow = c(1,1))
-plot(tempseq, delta[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Delta", xlab = "Temperature")
+plot(tempseq, delta[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "temperature")
 lines(tempseq, delta[,2], lwd = 2, col = color[2])
 lines(tempseq, delta[,3], lwd = 2, col = color[3])
 lines(tempseq, delta[,4], lwd = 2, col = color[4])
+legend(15, 1, legend=c("State 1", "State 2", "State 3", "State 4"),
+       col=color, lty = 1, cex=1, box.lwd = 0)
+
+
+# Plotting transition probabilities ---------------------------------------
+
+par(mfrow = c(4,3))
+par(mar = c(4.5, 4.5, 1.5, 2))
+for (i in 1:12){
+  if(i %in% 1:3){st = 1}
+  if(i %in% 4:6){st = 2}
+  if(i %in% 7:9){st = 3}
+  if(i %in% 10:12){st = 4}
+  plot(tempseq, transprobs[,i], main = NULL, 
+       ylab = colnames(transprobs)[i], xlab = "temperature", 
+       type = "l", lwd = 2, col = color[st])
+}
 
 par(mfrow = c(1,1))
-plot(data2$x, data2$y)
-plot(data4$x, data4$y, col = color[states], pch = 20)
+plot(data4$elevation, data4$temp, pch = 20)
+m = lm(temp ~ elevation, data = data4)
+summary(m)
+
+# Coordinate plot with decoded states -------------------------------------
+
+par(mfrow = c(1,1))
+plot(data4$x, data4$y, col = color[states])
 
 library(simply3d)
 simply_scatter(data4$x, data4$y, data4$height, colorvar = color[states])
@@ -606,6 +632,12 @@ boxplot(data4$elevation ~ states)
 boxplot(data4$temp ~ states)
 # soaring warmer, gliding colder
 # generally more temperature variation when flying
+
+
+# Multinomial regression --------------------------------------------------
+
+
+
 
 
 
