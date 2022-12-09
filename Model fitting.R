@@ -505,7 +505,6 @@ curve(
 )
 
 
-
 # Plotting 4 State HMM with skew norm -------------------------------------
 N = 4
 Gamma = diag(N)
