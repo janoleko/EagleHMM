@@ -258,6 +258,7 @@ theta.star = mod2.4$estimate
 data4 = data2[500:4000,]
 states = viterbi_na_sn(theta.star, data4, N = 4)
 
+
 # 4 State HMM with na and skew norm (full data set) -----------------------
 
 t1 = Sys.time()
@@ -290,15 +291,26 @@ states = viterbi_na_sn_cov(mod5$estimate, X = data2[1:5000,], N = 4)
 
 
 t1 = Sys.time()
-mod6 = nlm(f = mllk_na_sn_cov2, p = theta.star0.5, X = data2[1:5000,], N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8)
+# mod6 = nlm(f = mllk_na_sn_cov2, p = theta.star0.5, X = data2[1:5000,], N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8, hessian = T)
+mod6.1 = nlm(f = mllk_na_sn_cov2, p = theta.star0.5, X = data2[1:5000,], N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8, hessian = T)
 Sys.time()-t1
 theta.star = mod6$estimate
 states = viterbi_na_sn_cov2(mod6$estimate, X = data2[1:5000,], N = 4)
+
+t1 = Sys.time()
+mod7 = nlm(f = mllk_na_sn_cov3, p = theta.star0.5, X = data2[1:5000,], N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8)
+Sys.time()-t1
+theta.star = mod7$estimate
+states = viterbi_na_sn_cov3(mod7$estimate, X = data2[1:5000,], N = 4)
+# mod 7 ist quatsch
+
+
 
 # AIC:
 2*mllk_na_sn(mod2.4_3$estimate, X = data2[1:5000,], N = 4) + 2*length(mod2.4_3$estimate)
 2*mllk_na_sn_cov(mod5$estimate, X = data2[1:5000,], N = 4) + 2*length(mod5$estimate)
 2*mllk_na_sn_cov(mod6$estimate, X = data2[1:5000,], N = 4) + 2*length(mod6$estimate)
+
 
 # BIC:
 2*mllk_na_sn(mod2.4_3$estimate, X = data2[1:5000,], N = 4) + log(nrow(data2[1:5000,]))*length(mod2.4_3$estimate)
@@ -567,9 +579,9 @@ color = c("deepskyblue", "orange", "springgreen4", "dodgerblue3")
 
 data4 = data2[1:5000,]
 par(mfrow = c(3,1))
-plot(data4$step[1:5000], type = "h", col = color[states[1:5000]], ylab = "Step lenght")
-plot(data4$angle[1:5000], type = "h", col = color[states[1:5000]], ylab = "Turning angle")
-plot(data4$height.fd[1:5000], type = "h", col = color[states[1:5000]], ylab = "Height (fd.)")
+plot(data4$step[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Step lenght")
+plot(data4$angle[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Turning angle")
+plot(data4$height.fd[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Height (fd.)")
 
 
 tempseq = seq(min(data4$temp), max(data4$temp), length.out = 500)
@@ -604,11 +616,6 @@ for (i in 1:12){
        type = "l", lwd = 2, col = color[st])
 }
 
-par(mfrow = c(1,1))
-plot(data4$elevation, data4$temp, pch = 20)
-m = lm(temp ~ elevation, data = data4)
-summary(m)
-
 # Coordinate plot with decoded states -------------------------------------
 
 par(mfrow = c(1,1))
@@ -633,113 +640,3 @@ boxplot(data4$temp ~ states)
 # soaring warmer, gliding colder
 # generally more temperature variation when flying
 
-
-# Multinomial regression --------------------------------------------------
-
-
-
-
-
-
-# Looking at 4 State HMM with covariate elevation -------------------------
-
-theta.star = mod5$estimate
-N = 4
-coef = matrix(theta.star[1:(2*(N-1)*N)], (N-1)*N, 2)
-
-# gamma distribution: Step length
-mu.g = exp(theta.star[2*(N-1)*N+1:N]) # means of gamma distributions
-sigma.g = exp(theta.star[2*(N-1)*N+N+1:N]) # sds of gamma distributions
-
-# beta distribution: Turning angle/ pi
-alpha = exp(theta.star[2*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
-beta = exp(theta.star[2*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
-
-# normal distribution: Height first difference
-xi = theta.star[2*(N-1)*N+4*N+1:N] # means of normal distributions
-omega = exp(theta.star[2*(N-1)*N+5*N+1:N]) # sds of normal distributions
-al = theta.star[2*(N-1)*N+6*N+1:N]
-
-delta = c(1, exp(theta.star[2*(N-1)*N+7*N+1:(N-1)]))
-delta = delta/sum(delta)
-
-
-
-# Plotting 4 state HMM ----------------------------------------------------
-
-color = c("deepskyblue", "orange", "forestgreen", "tomato3")
-
-par(mfrow = c(1,1))
-# total
-hist(data2$step, prob = T, breaks = 200, xlab = "Step length", xlim = c(0,30), main = "Resting")
-curve(delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1]), add = T, lwd = 2, col = color[1])
-curve(delta[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2]), add = T, lwd = 2, col = color[2])
-curve(delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3]), add = T, lwd = 2, col = color[3],n = 500)
-curve(delta[4]*dgamma(x, shape = mu.g[4]^2/sigma.g[4]^2, scale = sigma.g[4]^2/mu.g[4]), add = T, lwd = 2, col = color[4],n = 500)
-
-curve(
-  delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1])+
-    delta[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2])+ 
-    delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3])+
-    delta[4]*dgamma(x, shape = mu.g[4]^2/sigma.g[4]^2, scale = sigma.g[4]^2/mu.g[4]),
-  add = T, lty = "dashed", lwd = 2, n = 500
-)
-
-hist(data2$angle, prob = T, breaks = 50, xlab = "Angle", xlim = c(0,1))
-curve(delta[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1]), add = T, lwd = 2, col = color[1])
-curve(delta[2]*dbeta(x, shape1 = alpha[2], shape2 = beta[2]), add = T, lwd = 2, col = color[2])
-curve(delta[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3]), add = T, lwd = 2, col = color[3])
-curve(delta[4]*dbeta(x, shape1 = alpha[4], shape2 = beta[4]), add = T, lwd = 2, col = color[4], n = 500)
-
-curve(
-  delta[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1])+
-    delta[2]*dbeta(x, shape1 = alpha[2], shape2 = beta[2])+
-    delta[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3])+
-    delta[4]*dbeta(x, shape1 = alpha[4], shape2 = beta[4]),
-  add = T, lty = "dashed", lwd = 2
-)
-
-hist(data2$height.fd, prob = T, breaks = 500, xlab = "Height.fd", xlim = c(-5,5))
-
-curve(delta[1]*dnorm(x, mu[1], sigma[1]), add = T, lwd = 2, col = color[1])
-curve(delta[2]*dnorm(x, mu[2], sigma[2]), add = T, lwd = 2, col = color[2])
-curve(delta[3]*dnorm(x, mu[3], sigma[3]), add = T, lwd = 2, col = color[3],n =1000)
-curve(delta[4]*dnorm(x, mu[4], sigma[4]), add = T, lwd = 2, col = color[4],n =1000)
-
-curve(
-  delta[1]*dnorm(x, mu[1], sigma[1])+
-    delta[2]*dnorm(x, mu[2], sigma[2])+
-    delta[3]*dnorm(x, mu[3], sigma[3])+
-    delta[4]*dnorm(x, mu[4], sigma[4]),
-  add = T, lty = "dashed", lwd = 2, n=1000
-)
-
-states = viterbi(mod$estimate, data2, 3)
-
-par(mfrow = c(3,1))
-plot(data2$step[10001:10200], type = "h", col = color[states[10001:10200]], ylab = "Step length")
-plot(data2$angle[10001:10200], type = "h", col = color[states[10001:10200]], ylab = "Turning angle")
-plot(data2$height.fd[10001:10200], type = "h", col = color[states][10001:10200], ylab = "Height(fd)")
-
-
-# Getting better starting values for beta distribution --------------------
-
-hist(data2$angle, prob = T, breaks = 50, xlab = "Angle", xlim = c(0,1))
-curve(dbeta(x, shape1 = .5, shape2 = 2), add = T)
-
-hist(data2$step, prob = T, breaks = 200, xlab = "Step length", xlim = c(0,30), ylim = c(0,1.4), main = "Resting")
-curve(dgamma(x, shape = 0.5^2/0.4^2, scale = 0.4^2/0.5), add = T, n = 500)
-
-library(sn)
-hist(data2$height.fd, prob = T, breaks = 100, xlim = c(-6,6))
-curve(0.15*dsn(x, 0.2, 1, 5), add = T)
-curve(0.15*dsn(x, -0.2, 1, -5), add = T)
-
-
-simply3d::simply_scatter(ider$location.lat[301500:301530],
-                         ider$location.long[301500:301530],
-                         ider$height.above.msl[301500:301530])
-
-
-simply_scatter(data2$x[1:5000], data2$y[1:5000], data2$height[1:5000])
-plot(data2$x[1:5000], data2$y[1:5000])
