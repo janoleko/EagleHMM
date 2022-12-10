@@ -2,38 +2,15 @@
 # HMM functions -----------------------------------------------------------
 
 zgamma_scalar = function(x, mu, sigma, p){
-  if(x == 0){
-    return(p)
-  }
-  else{
-    return((1-p)*dgamma(x, shape = mu^2/sigma^2, scale = sigma^2/mu))
-  }
+  if(x == 0){return(p)}
+  else{return((1-p)*dgamma(x, shape = mu^2/sigma^2, scale = sigma^2/mu))}
 }
-
 zgamma = function(x, mu, sigma, p){
   return(sapply(x, zgamma_scalar, mu = mu, sigma = sigma, p = p))
 }
 
-flip_gamma = function(x, mu, sigma){
-  return(dgamma(-x, shape = mu^2/sigma^2, scale = sigma^2/-mu))
-}
 
-
-zbeta_scalar = function(x, shape1, shape2, p){
-  if(x == 0){
-    return(p)
-  }
-  else{
-    return((1-p)*dbeta(x, shape1 = shape1, shape2 = shape2))
-  }
-}
-
-zbeta = function(x, shape1, shape2, p){
-  return(sapply(x, zbeta_scalar, shape1 = shape1, shape2 = shape2, p = p))
-}
-
-
-
+# Likelihoods -------------------------------------------------------------
 
 # likelihood for 3D-time series assuming contemporaneous conditional independence
 mllk = function(theta.star, X, N){
@@ -457,6 +434,8 @@ mllk_na_sn_cov3 = function(theta.star, X, N){
 }
 
 
+# Viterbi functions -------------------------------------------------------
+
 viterbi_na_sn_cov2 = function(theta.star, X, N){
   n = nrow(X)
   days = unique(X$day)
@@ -600,7 +579,6 @@ viterbi_na_sn_cov3 = function(theta.star, X, N){
 }
 
 
-
 viterbi_na_sn_cov = function(theta.star, X, N){
   n = nrow(X)
   
@@ -656,6 +634,9 @@ viterbi_na_sn_cov = function(theta.star, X, N){
     iv[t] <- which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
   return(iv) 
 }
+
+
+# Functions to get transprobs and delta -----------------------------------
 
 solve_gamma_na_sn_cov = function(theta.star, temp, N){
   coef = matrix(theta.star[1:(2*(N-1)*N)], (N-1)*N, 2)
