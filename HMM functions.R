@@ -676,7 +676,7 @@ solve_gamma_na_sn_cov = function(theta.star, temp, N){
 get_transprobs = function(theta.star, temp){
   N = 4
   coef = matrix(theta.star[1:(2*(N-1)*N)], (N-1)*N, 2)
-  transprobs = matrix(data = NA, nrow = length(temp), ncol = (N-1)*N)
+  transprobs = matrix(data = NA, nrow = length(temp), ncol = N^2)
   
   for (i in 1:length(temp)){
     eta = coef[,1] + coef[,2]*temp[i]
@@ -684,14 +684,13 @@ get_transprobs = function(theta.star, temp){
     Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
     Gamma = Gamma/rowSums(Gamma)
     
-    transprobs[i,] = c(Gamma[2:4,1], Gamma[c(1,3:4),2],
-                      Gamma[c(1:2,4),3], Gamma[1:3,4])
+    transprobs[i,] = c(Gamma[1,], Gamma[2,], Gamma[3,], Gamma[4,])
   }
   transprobs = as.data.frame(transprobs)
-  colnames(transprobs) = c("2 -> 1","3 -> 1", "4 -> 1",
-                          "1 -> 2", "3 -> 2", "4 -> 2",
-                          "1 -> 3", "2 -> 3", "4 -> 3",
-                          "1 -> 4", "2 -> 4", "3 -> 4")
+  colnames(transprobs) = c("1 -> 1","1 -> 2", "1 -> 3", "1 -> 4",
+                          "2 -> 1", "2 -> 2", "2 -> 3", "2 -> 4",
+                          "3 -> 1", "3 -> 2", "3 -> 3", "3 -> 4",
+                          "4 -> 1", "4 -> 2", "4 -> 3", "4 -> 4")
   return(transprobs)
 }
 
