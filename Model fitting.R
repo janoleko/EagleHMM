@@ -44,7 +44,7 @@ data = as.data.frame(cbind(ider,d, measurement))
 
 # aggregation with mean
 data2 = data %>% 
-  dplyr::select(step, angle, height = height.above.msl, height.fd, measurement, x, y, day, landform, elevation = elevation.m, temp = external.temperature) %>% 
+  dplyr::select(step, angle, height = height.above.msl, height.fd, measurement, x, y, day, landform, landform.type, elevation = elevation.m, temp = external.temperature) %>% 
   group_by(measurement) %>% 
   summarise(count_steps = sum(!is.na(step)),
             count_angles = sum(!is.na(angle)), # find intervals where there are barely any values
@@ -57,6 +57,7 @@ data2 = data %>%
             y = mean(y, na.rm = T),
             day = mean(day, na.rm = T),
             landform = as.integer(names(which.max(table(landform)))),
+            landform.type = as.character(names(which.max(table(na.omit(landform.type))))),
             elevation = mean(elevation, na.rm = T),
             temp = mean(temp, na.rm = T)) %>% 
   ungroup() %>% 
@@ -590,7 +591,7 @@ tempseq = seq(min(data4$temp), max(data4$temp), length.out = 500)
 delta = solve_gamma_na_sn_cov(theta.star, tempseq, N = 4)
 transprobs = get_transprobs(theta.star, tempseq)
 
-# Plotting hypothetical data ----------------------------------------------
+# Plotting hypothetical delta ----------------------------------------------
 
 par(mfrow = c(1,1))
 plot(tempseq, delta[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "temperature")
@@ -601,15 +602,64 @@ legend(15, 1, legend=c("State 1", "State 2", "State 3", "State 4"),
        col=color, lty = 1, cex=1, box.lwd = 0)
 
 
-# Plotting transition probabilities ---------------------------------------
+tempseq2 = seq(15, 50, length.out = 4)
+
+N = 4
+mu.g = exp(theta.star[2*(N-1)*N+1:N]) # means of gamma distributions
+sigma.g = exp(theta.star[2*(N-1)*N+N+1:N]) # sds of gamma distributions
+
+# beta distribution: Turning angle/ pi
+alpha = exp(theta.star[2*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+beta = exp(theta.star[2*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+
+# normal distribution: Height first difference
+xi = theta.star[2*(N-1)*N+4*N+1:N] # means of normal distributions
+omega = exp(theta.star[2*(N-1)*N+5*N+1:N]) # sds of normal distributions
+al = theta.star[2*(N-1)*N+6*N+1:N]
+
 
 par(mfrow = c(4,3))
+par(mar = c(4, 4, 1.5, 1.5))
+for (i in 1:length(tempseq2)){
+  delta = solve_gamma_na_sn_cov(theta.star, tempseq2[i], N = 4)
+  curve(delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1]), col = color[1], lwd = 1, xlim = c(0,30), ylim = c(0,0.35), ylab = "density", xlab = "step length", n = 300)
+  curve(delta[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2]), col = color[2], add = T, lwd = 1, n = 300)
+  curve(delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3]), col = color[3], add = T, lwd = 1, n = 300)
+  curve(delta[4]*dgamma(x, shape = mu.g[4]^2/sigma.g[4]^2, scale = sigma.g[4]^2/mu.g[4]), col = color[4], add = T, lwd = 1, n = 300)
+  curve(delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1])+
+          delta[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2])+
+          delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3])+
+          delta[4]*dgamma(x, shape = mu.g[4]^2/sigma.g[4]^2, scale = sigma.g[4]^2/mu.g[4]), lty = "dashed", lwd = 2, add = T, n = 300)
+  
+  curve(delta[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1]), col = color[1], lwd = 1, xlim = c(0,1), ylim = c(0,6.5), ylab = "density", xlab = "turning angle", n = 300)
+  curve(delta[2]*dbeta(x, shape1 = alpha[2], shape2 = beta[2]), col = color[2], lwd = 1, add = T, n = 300)
+  curve(delta[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3]), col = color[3], lwd = 1, add = T, n = 300)
+  curve(delta[4]*dbeta(x, shape1 = alpha[4], shape2 = beta[4]), col = color[4], lwd = 1, add = T, n = 300)
+  curve(delta[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1])+
+          delta[2]*dbeta(x, shape1 = alpha[2], shape2 = beta[2])+
+          delta[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3])+
+          delta[4]*dbeta(x, shape1 = alpha[4], shape2 = beta[4]), lty = "dashed", lwd = 2, add = T, n = 300)
+  
+  curve(delta[1]*dsn(x, xi = xi[1], omega = omega[1], alpha = al[1]), col = color[1], lwd = 1, xlim = c(-10,10), ylim = c(0,0.25), ylab = "density", xlab = "height.fd", n = 300)
+  curve(delta[2]*dsn(x, xi = xi[2], omega = omega[2], alpha = al[2]), col = color[2], lwd = 1, add = T, n = 300)
+  curve(delta[3]*dsn(x, xi = xi[3], omega = omega[3], alpha = al[3]), col = color[3], lwd = 1, add = T, n = 300)
+  curve(delta[4]*dsn(x, xi = xi[4], omega = omega[4], alpha = al[4]), col = color[4], lwd = 1, add = T, n = 300)
+  curve(delta[1]*dsn(x, xi = xi[1], omega = omega[1], alpha = al[1])+
+          delta[2]*dsn(x, xi = xi[2], omega = omega[2], alpha = al[2])+
+          delta[3]*dsn(x, xi = xi[3], omega = omega[3], alpha = al[3])+
+          delta[4]*dsn(x, xi = xi[4], omega = omega[4], alpha = al[4]), lty = "dashed", lwd = 2, add = T, n = 300)
+}
+
+
+# Plotting transition probabilities ---------------------------------------
+
+par(mfrow = c(4,4))
 par(mar = c(4.5, 4.5, 1.5, 2))
-for (i in 1:12){
-  if(i %in% 1:3){st = 1}
-  if(i %in% 4:6){st = 2}
-  if(i %in% 7:9){st = 3}
-  if(i %in% 10:12){st = 4}
+for (i in 1:16){
+  if(i %in% 1:4){st = 1}
+  if(i %in% 5:8){st = 2}
+  if(i %in% 9:12){st = 3}
+  if(i %in% 13:16){st = 4}
   plot(tempseq, transprobs[,i], main = NULL, 
        ylab = colnames(transprobs)[i], xlab = "temperature", 
        type = "l", lwd = 2, col = color[st])
