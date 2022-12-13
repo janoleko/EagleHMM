@@ -59,11 +59,23 @@ We came up with 3 to 4 clearly distinguishable behaviours which the HMM could ma
   
 ## Todo
 * Likelihood umschreiben --> jeweils Schleife über Tage
-* Was machen (day Variable ist kacke)?
-* Heading für turning angle benutzen -> first difference (funktioniert nicht (warum?))
-* scatter3D Farben checken
-* landform mit aggregieren und anschauen wie die Beziehung zwischen Decoded states und landform ist: Grundsätzlich gute Idee für ersten Eindruck welche Covariaten interessant sein könnten (Multinomiale Regression)
-* covariaten für transition probs
-* müssen wir wirklich für ToD immer ganzen Tag haben, ist das nicht egal?
-* gemeinsames HMM für mehrere Vögel?
+  * Was bedeutet das für Delta? (täglich schätzen?)
+* Andere Covariablen mit in Multinomiale Regression
+* andere covariaten für transition probs
+  * Slope.rad
+  * elevation.fd
+  * ToD
+* E-Mail Marielle
+  * Präsentieren was bis jetzt so rauskam
+  * Fragen formulieren (kann sie ihre Forschungsfragen präzisieren?)
+    * Beobachtungen unter sealevel?
+    * Acceleration data vorhanden? Was meinte sie damit (wie sollen wir flapping flight kriegen?)
+    * 2 Resting States: Inhaltliche Interpretation?
+    * Wenn sie vor allem die trans-him-mig interessiert, wonach sollen wir die Beobachtungen auswählen (im Moment einfach erste 5000: Einmal hin)
+    * Welche Kovariaten sind den überhaupt die spannendsten?
+    
+
+(* Heading für turning angle benutzen -> first difference (funktioniert nicht (warum?)))
+* lubridate::asPosixc oder so um aus der timestamp variable den Tag zu extrahieren
+
 
