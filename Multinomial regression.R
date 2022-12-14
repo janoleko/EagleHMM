@@ -2,15 +2,13 @@
 library(fastDummies)
 library(nnet)
 
+data4$states = states
 colnames(data4)
-data5 = data4 %>% select(states, l = landform.type)
-dataf = dummy_cols(data5, select_columns = 'l')
-colnames(dataf) = c("states", "landform", 
-                    "cliff", "lower_slope",
-                    "mountain_divide", "peak_ridge",
-                    "upper_slope", "valley")
+data5 = data4 %>% select(states, l_ = landform.type, temp, elevation)
+data5$l_ = as.factor(data5$l_)
+data5$states = relevel(as.factor(data5$states), ref = "2")
+data5$elevation.fd = c(NA, diff(data5$elevation))
 
-m = multinom(states ~ cliff + lower_slope + mountain_divide + peak_ridge +
-               upper_slope + valley,
-             data = dataf)
+m = multinom(states ~ l_ + temp + elevation, data = data5)
 summary(m)
+
