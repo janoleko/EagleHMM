@@ -7,7 +7,6 @@ theta0.tod = c(Gamma[2:4,1], Gamma[c(1,3:4),2], Gamma[c(1:2,4),3], Gamma[1:3,4],
                0.05, 0.5, 0.5, 0.5, # omega
                0, 5, -5, 5) # al
 
-
 theta.star0.tod = c(theta0.tod[1:36],
                     log(theta0.tod[37:52]),
                     theta0.tod[53:56],
@@ -69,4 +68,50 @@ for (i in 1:16){
   plot(todseq, transprobs_tod[,i], main = NULL, 
        ylab = colnames(transprobs_tod)[i], xlab = "time of day", 
        type = "l", lwd = 2, col = color[st])
+}
+
+
+# Hypothetical marginals
+
+todseq2 = seq(min(data4$time), max(data4$time), length.out = 4)
+
+N = 4
+mu.g = exp(theta.star[3*(N-1)*N+1:N]) # means of gamma distributions
+sigma.g = exp(theta.star[3*(N-1)*N+N+1:N]) # sds of gamma distributions
+alpha = exp(theta.star[3*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+beta = exp(theta.star[3*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+xi = theta.star[3*(N-1)*N+4*N+1:N] # means of normal distributions
+omega = exp(theta.star[3*(N-1)*N+5*N+1:N]) # sds of normal distributions
+al = theta.star[3*(N-1)*N+6*N+1:N]
+
+par(mfrow = c(4,3))
+par(mar = c(4, 4, 1.5, 1.5))
+for (i in 1:length(todseq2)){
+  delta = solve_gamma_tod(mod8$estimate, todseq2[i], N = 4)
+  curve(delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1]), col = color[1], lwd = 1, xlim = c(0,30), ylim = c(0,0.35), ylab = "density", xlab = "step length", n = 300, main = paste("ToD =", round(todseq2[i], 0)))
+  curve(delta[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2]), col = color[2], add = T, lwd = 1, n = 300)
+  curve(delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3]), col = color[3], add = T, lwd = 1, n = 300)
+  curve(delta[4]*dgamma(x, shape = mu.g[4]^2/sigma.g[4]^2, scale = sigma.g[4]^2/mu.g[4]), col = color[4], add = T, lwd = 1, n = 300)
+  curve(delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1])+
+          delta[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2])+
+          delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3])+
+          delta[4]*dgamma(x, shape = mu.g[4]^2/sigma.g[4]^2, scale = sigma.g[4]^2/mu.g[4]), lty = "dashed", lwd = 2, add = T, n = 300)
+  
+  curve(delta[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1]), col = color[1], lwd = 1, xlim = c(0,1), ylim = c(0,6.5), ylab = "density", xlab = "turning angle", n = 300, main = paste("ToD =", round(todseq2[i], 0)))
+  curve(delta[2]*dbeta(x, shape1 = alpha[2], shape2 = beta[2]), col = color[2], lwd = 1, add = T, n = 300)
+  curve(delta[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3]), col = color[3], lwd = 1, add = T, n = 300)
+  curve(delta[4]*dbeta(x, shape1 = alpha[4], shape2 = beta[4]), col = color[4], lwd = 1, add = T, n = 300)
+  curve(delta[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1])+
+          delta[2]*dbeta(x, shape1 = alpha[2], shape2 = beta[2])+
+          delta[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3])+
+          delta[4]*dbeta(x, shape1 = alpha[4], shape2 = beta[4]), lty = "dashed", lwd = 2, add = T, n = 300)
+  
+  curve(delta[1]*dsn(x, xi = xi[1], omega = omega[1], alpha = al[1]), col = color[1], lwd = 1, xlim = c(-10,10), ylim = c(0,0.25), ylab = "density", xlab = "height.fd", n = 300, main = paste("ToD =", round(todseq2[i], 0)))
+  curve(delta[2]*dsn(x, xi = xi[2], omega = omega[2], alpha = al[2]), col = color[2], lwd = 1, add = T, n = 300)
+  curve(delta[3]*dsn(x, xi = xi[3], omega = omega[3], alpha = al[3]), col = color[3], lwd = 1, add = T, n = 300)
+  curve(delta[4]*dsn(x, xi = xi[4], omega = omega[4], alpha = al[4]), col = color[4], lwd = 1, add = T, n = 300)
+  curve(delta[1]*dsn(x, xi = xi[1], omega = omega[1], alpha = al[1])+
+          delta[2]*dsn(x, xi = xi[2], omega = omega[2], alpha = al[2])+
+          delta[3]*dsn(x, xi = xi[3], omega = omega[3], alpha = al[3])+
+          delta[4]*dsn(x, xi = xi[4], omega = omega[4], alpha = al[4]), lty = "dashed", lwd = 2, add = T, n = 300)
 }
