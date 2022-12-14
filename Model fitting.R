@@ -44,7 +44,7 @@ data = as.data.frame(cbind(ider,d, measurement))
 
 # aggregation with mean
 data2 = data %>% 
-  dplyr::select(step, angle, height = height.above.msl, height.fd, measurement, x, y, day, landform, landform.type, elevation = elevation.m, temp = external.temperature) %>% 
+  dplyr::select(step, angle, height = height.above.msl, height.fd, measurement, x, y, day, landform, landform.type, elevation = elevation.m, temp = external.temperature, time = solar.time) %>% 
   group_by(measurement) %>% 
   summarise(count_steps = sum(!is.na(step)),
             count_angles = sum(!is.na(angle)), # find intervals where there are barely any values
@@ -59,7 +59,8 @@ data2 = data %>%
             landform = as.integer(names(which.max(table(landform)))),
             landform.type = as.character(names(which.max(table(na.omit(landform.type))))),
             elevation = mean(elevation, na.rm = T),
-            temp = mean(temp, na.rm = T)) %>% 
+            temp = mean(temp, na.rm = T),
+            time = mean(time, na.rm = T)) %>% 
   ungroup() %>% 
   mutate(remove_step_height = (count_steps <= 3 | count_heights <= 3),
          remove_angle = count_angles <= 3)
@@ -238,6 +239,22 @@ theta.star0.5 = c(theta0.5[1:24],
                   log(theta0.5[45:48]),
                   theta0.5[49:55])
 
+theta0.tod = c(Gamma[2:4,1], Gamma[c(1,3:4),2], Gamma[c(1:2,4),3], Gamma[1:3,4], rep(0,24),
+             1, 8, 15, 2, # mu.gamma
+             1, 4, 10, 2, # sigma.gamma
+             0.7, 10, 1, 3, # alphas
+             2, 55, 40, 40, # betas
+             0, 0.2, -0.2, 0.4, # xi
+             0.05, 0.5, 0.5, 0.5, # omega
+             0, 5, -5, 5) # al
+
+
+theta.star0.tod = c(theta0.tod[1:36],
+                    log(theta0.tod[37:52]),
+                    theta0.tod[53:56],
+                    log(theta0.tod[57:60]),
+                    theta0.tod[61:64])
+
 
 
 t1 = Sys.time()
@@ -304,6 +321,13 @@ Sys.time()-t1
 theta.star = mod7$estimate
 states = viterbi_na_sn_cov3(mod7$estimate, X = data2[1:5000,], N = 4)
 # mod 7 ist quatsch
+
+
+t1 = Sys.time()
+mod8 = nlm(f = mllk_tod, p = theta.star0.tod, X = data4, N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8)
+Sys.time()-t1
+theta.star = mod8$estimate
+
 
 
 
@@ -580,6 +604,8 @@ color = c("deepskyblue", "orange", "springgreen4", "dodgerblue3")
 data4 = data2[1:5000,]
 par(mfrow = c(3,1))
 plot(data4$step[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Step lenght")
+legend(x = 4600, y = 30, legend=c("State 1", "State 2", "State 3", "State 4"),
+        col=color, lty = 1, cex=1)
 plot(data4$angle[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Turning angle")
 plot(data4$height.fd[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Height (fd.)")
 
@@ -594,15 +620,15 @@ transprobs = get_transprobs(theta.star, tempseq)
 # Plotting hypothetical delta ----------------------------------------------
 
 par(mfrow = c(1,1))
-plot(tempseq, delta[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "temperature")
+plot(tempseq, delta[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,0.8), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "temperature")
 lines(tempseq, delta[,2], lwd = 2, col = color[2])
 lines(tempseq, delta[,3], lwd = 2, col = color[3])
 lines(tempseq, delta[,4], lwd = 2, col = color[4])
-legend(15, 1, legend=c("State 1", "State 2", "State 3", "State 4"),
+legend(15, 0.8, legend=c("State 1", "State 2", "State 3", "State 4"),
        col=color, lty = 1, cex=1, box.lwd = 0)
 
 
-tempseq2 = seq(15, 50, length.out = 4)
+tempseq2 = seq(15, 50, length.out = 3)
 
 N = 4
 mu.g = exp(theta.star[2*(N-1)*N+1:N]) # means of gamma distributions
@@ -618,11 +644,11 @@ omega = exp(theta.star[2*(N-1)*N+5*N+1:N]) # sds of normal distributions
 al = theta.star[2*(N-1)*N+6*N+1:N]
 
 
-par(mfrow = c(4,3))
+par(mfrow = c(3,3))
 par(mar = c(4, 4, 1.5, 1.5))
 for (i in 1:length(tempseq2)){
   delta = solve_gamma_na_sn_cov(theta.star, tempseq2[i], N = 4)
-  curve(delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1]), col = color[1], lwd = 1, xlim = c(0,30), ylim = c(0,0.35), ylab = "density", xlab = "step length", n = 300)
+  curve(delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1]), col = color[1], lwd = 1, xlim = c(0,30), ylim = c(0,0.35), ylab = "density", xlab = "step length", n = 300, main = paste("Temperature =", round(tempseq2[i], 0),"°"))
   curve(delta[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2]), col = color[2], add = T, lwd = 1, n = 300)
   curve(delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3]), col = color[3], add = T, lwd = 1, n = 300)
   curve(delta[4]*dgamma(x, shape = mu.g[4]^2/sigma.g[4]^2, scale = sigma.g[4]^2/mu.g[4]), col = color[4], add = T, lwd = 1, n = 300)
@@ -631,7 +657,7 @@ for (i in 1:length(tempseq2)){
           delta[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3])+
           delta[4]*dgamma(x, shape = mu.g[4]^2/sigma.g[4]^2, scale = sigma.g[4]^2/mu.g[4]), lty = "dashed", lwd = 2, add = T, n = 300)
   
-  curve(delta[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1]), col = color[1], lwd = 1, xlim = c(0,1), ylim = c(0,6.5), ylab = "density", xlab = "turning angle", n = 300)
+  curve(delta[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1]), col = color[1], lwd = 1, xlim = c(0,1), ylim = c(0,6.5), ylab = "density", xlab = "turning angle", n = 300, main = paste("Temperature =", round(tempseq2[i], 0),"°"))
   curve(delta[2]*dbeta(x, shape1 = alpha[2], shape2 = beta[2]), col = color[2], lwd = 1, add = T, n = 300)
   curve(delta[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3]), col = color[3], lwd = 1, add = T, n = 300)
   curve(delta[4]*dbeta(x, shape1 = alpha[4], shape2 = beta[4]), col = color[4], lwd = 1, add = T, n = 300)
@@ -640,7 +666,7 @@ for (i in 1:length(tempseq2)){
           delta[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3])+
           delta[4]*dbeta(x, shape1 = alpha[4], shape2 = beta[4]), lty = "dashed", lwd = 2, add = T, n = 300)
   
-  curve(delta[1]*dsn(x, xi = xi[1], omega = omega[1], alpha = al[1]), col = color[1], lwd = 1, xlim = c(-10,10), ylim = c(0,0.25), ylab = "density", xlab = "height.fd", n = 300)
+  curve(delta[1]*dsn(x, xi = xi[1], omega = omega[1], alpha = al[1]), col = color[1], lwd = 1, xlim = c(-10,10), ylim = c(0,0.25), ylab = "density", xlab = "height.fd", n = 300, main = paste("Temperature =", round(tempseq2[i], 0),"°"))
   curve(delta[2]*dsn(x, xi = xi[2], omega = omega[2], alpha = al[2]), col = color[2], lwd = 1, add = T, n = 300)
   curve(delta[3]*dsn(x, xi = xi[3], omega = omega[3], alpha = al[3]), col = color[3], lwd = 1, add = T, n = 300)
   curve(delta[4]*dsn(x, xi = xi[4], omega = omega[4], alpha = al[4]), col = color[4], lwd = 1, add = T, n = 300)
@@ -689,3 +715,4 @@ boxplot(data4$temp ~ states)
 # soaring warmer, gliding colder
 # generally more temperature variation when flying
 
+View(head(ider,200))
