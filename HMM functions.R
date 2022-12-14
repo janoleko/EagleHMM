@@ -644,12 +644,12 @@ viterbi_tod = function(theta.star, X, N){
   iv <- numeric(n)
   iv[n] <- which.max(xi[n, ]) 
   for (t in (n - 1):1){
-    eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[t]]/24) + coef[,3]*cos(2*pi*X$time[index[t]]/24)
+    eta = coef[,1] + coef[,2]*sin(2*pi*X$time[t]/24) + coef[,3]*cos(2*pi*X$time[t]/24)
     Gamma = diag(N)
     Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
     Gamma = Gamma/rowSums(Gamma)
     
-    iv[t] <- which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
+    iv[t] = which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
   return(iv)  
 }
 
@@ -804,6 +804,22 @@ solve_gamma_na_sn_cov = function(theta.star, temp, N){
 }
 
 
+solve_gamma_tod = function(theta.star, tod, N){
+  coef = matrix(theta.star[1:(3*(N-1)*N)], (N-1)*N, 3)
+  delta = matrix(data = NA, nrow = length(tod), ncol = N)
+  
+  for (i in 1:length(tod)){
+    eta = coef[,1] + coef[,2]*sin(2*pi*tod[i]/24) + coef[,3]*cos(2*pi*tod[i]/24)
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    delta[i,] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-18)
+  }
+  return(delta)
+}
+
+
 get_transprobs = function(theta.star, temp){
   N = 4
   coef = matrix(theta.star[1:(2*(N-1)*N)], (N-1)*N, 2)
@@ -822,6 +838,28 @@ get_transprobs = function(theta.star, temp){
                           "2 -> 1", "2 -> 2", "2 -> 3", "2 -> 4",
                           "3 -> 1", "3 -> 2", "3 -> 3", "3 -> 4",
                           "4 -> 1", "4 -> 2", "4 -> 3", "4 -> 4")
+  return(transprobs)
+}
+
+
+get_transprobs_tod = function(theta.star, tod){
+  N = 4
+  coef = matrix(theta.star[1:(3*(N-1)*N)], (N-1)*N, 3)
+  transprobs = matrix(data = NA, nrow = length(tod), ncol = N^2)
+  
+  for (i in 1:length(tod)){
+    eta = coef[,1] + coef[,2]*sin(2*pi*tod[i]/24) + coef[,3]*cos(2*pi*tod[i]/24)
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    transprobs[i,] = c(Gamma[1,], Gamma[2,], Gamma[3,], Gamma[4,])
+  }
+  transprobs = as.data.frame(transprobs)
+  colnames(transprobs) = c("1 -> 1","1 -> 2", "1 -> 3", "1 -> 4",
+                           "2 -> 1", "2 -> 2", "2 -> 3", "2 -> 4",
+                           "3 -> 1", "3 -> 2", "3 -> 3", "3 -> 4",
+                           "4 -> 1", "4 -> 2", "4 -> 3", "4 -> 4")
   return(transprobs)
 }
 
