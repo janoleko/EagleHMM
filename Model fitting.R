@@ -327,6 +327,8 @@ t1 = Sys.time()
 mod8 = nlm(f = mllk_tod, p = theta.star0.tod, X = data4, N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8)
 Sys.time()-t1
 theta.star = mod8$estimate
+states = viterbi_tod(mod8$estimate, X = data2[1:5000,], N = 4)
+
 
 
 
@@ -335,14 +337,18 @@ theta.star = mod8$estimate
 2*mllk_na_sn(mod2.4_3$estimate, X = data2[1:5000,], N = 4) + 2*length(mod2.4_3$estimate)
 2*mllk_na_sn_cov(mod5$estimate, X = data2[1:5000,], N = 4) + 2*length(mod5$estimate)
 2*mllk_na_sn_cov(mod6$estimate, X = data2[1:5000,], N = 4) + 2*length(mod6$estimate)
+2*mllk_tod(mod8$estimate, X = data2[1:5000,], N = 4) + 2*length(mod8$estimate)
 
 
 # BIC:
 2*mllk_na_sn(mod2.4_3$estimate, X = data2[1:5000,], N = 4) + log(nrow(data2[1:5000,]))*length(mod2.4_3$estimate)
 2*mllk_na_sn_cov(mod5$estimate, X = data2[1:5000,], N = 4) + log(nrow(data2[1:5000,]))*length(mod5$estimate)
 2*mllk_na_sn_cov(mod6$estimate, X = data2[1:5000,], N = 4) + log(nrow(data2[1:5000,]))*length(mod6$estimate)
+2*mllk_tod(mod8$estimate, X = data2[1:5000,], N = 4) + log(nrow(data2[1:5000,]))*length(mod8$estimate)
+
 
 # AIC and BIC prefer the covariate model
+# AIC and BIC prefer the model with tod
 
 
 theta.star = mod$estimate
@@ -604,7 +610,7 @@ color = c("deepskyblue", "orange", "springgreen4", "dodgerblue3")
 data4 = data2[1:5000,]
 par(mfrow = c(3,1))
 plot(data4$step[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Step lenght")
-legend(x = 4600, y = 30, legend=c("State 1", "State 2", "State 3", "State 4"),
+legend(x = 4700, y = 30, legend=c("State 1", "State 2", "State 3", "State 4"),
         col=color, lty = 1, cex=1)
 plot(data4$angle[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Turning angle")
 plot(data4$height.fd[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Height (fd.)")
