@@ -441,6 +441,73 @@ mllk_tod = function(theta.star, X, N){
   return(-l) 
 }
 
+mllk_tt = function(theta.star, X, N){
+  days = unique(X$day)
+  numdays = length(days)
+  
+  coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
+  
+  # gamma distribution: Step length
+  mu.g = exp(theta.star[4*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[4*(N-1)*N+N+1:N]) # sds of gamma distributions
+  
+  # beta distribution: Turning angle/ pi
+  alpha = exp(theta.star[4*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[4*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  
+  # skew normal distribution: Height first difference
+  xi = theta.star[4*(N-1)*N+4*N+1:N] # means of normal distributions
+  omega = exp(theta.star[4*(N-1)*N+5*N+1:N]) # sds of normal distributions
+  al = theta.star[4*(N-1)*N+6*N+1:N]
+  
+  delta = c(1, exp(theta.star[4*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd)) # Fragen wie wir das machen --> sonst immer gar keine Information nur weil in angle Zeitreihe so viele NAs
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])* # beta
+      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+    
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+  }
+  
+  # forward algorithm to compute the log-likelihood
+  l = numeric(numdays)
+  # compute the daywise likelihoods seperately and sum up in the end
+  for(i in 1:numdays){
+    index = which(X$day == i)
+    
+    eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[1]]/24) + coef[,3]*cos(2*pi*X$time[index[1]]/24) + 
+      coef[,4]*X$temp[index[1]]
+    
+    # vllt statt delta die hypothetische stationary zu Tagesbeginn oder gleichverteilt
+    foo = delta%*%diag(allprobs[index[1],])
+    l[i] = log(sum(foo))
+    phi = foo/sum(foo)
+    
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[t]]/24) + coef[,3]*cos(2*pi*X$time[index[t]]/24) +
+        coef[,4]*X$temp[index[t]]
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      foo = phi%*%Gamma%*%diag(allprobs[index[t],])
+      l[i] = l[i]+log(sum(foo))
+      phi = foo/sum(foo)
+    }
+  }
+  l = sum(l)
+  return(-l) 
+}
+
 
 
 mllk_na_sn_cov3 = function(theta.star, X, N){
@@ -654,7 +721,86 @@ viterbi_tod = function(theta.star, X, N){
 }
 
 
-
+viterbi_tt = function(theta.star, X, N){
+  n = nrow(X)
+  days = unique(X$day)
+  numdays = length(days)
+  
+  coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
+  
+  # gamma distribution: Step length
+  mu.g = exp(theta.star[4*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[4*(N-1)*N+N+1:N]) # sds of gamma distributions
+  
+  # beta distribution: Turning angle/ pi
+  alpha = exp(theta.star[4*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[4*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  
+  # normal distribution: Height first difference
+  xi = theta.star[4*(N-1)*N+4*N+1:N] # means of normal distributions
+  omega = exp(theta.star[4*(N-1)*N+5*N+1:N]) # sds of normal distributions
+  al = theta.star[4*(N-1)*N+6*N+1:N]
+  
+  delta = c(1, exp(theta.star[4*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd)) # Fragen wie wir das machen --> sonst immer gar keine Information nur weil in angle Zeitreihe so viele NAs
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])* # beta
+      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+    
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+  }
+  
+  # forward algorithm to compute the log-likelihood
+  l = numeric(numdays)
+  xi = matrix(0, n, ncol = N)
+  
+  for(i in 1:numdays){
+    index = which(X$day == i)
+    
+    eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[1]]/24) + coef[,3]*cos(2*pi*X$time[index[1]]/24) + 
+      coef[,4]*X$temp[index[1]]
+    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    delta = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-18)
+    
+    # vllt statt delta die hypothetische stationary zu Tagesbeginn oder gleichverteilt
+    foo = delta * allprobs[index[1], ]
+    xi[index[1], ] = foo / sum(foo)
+    
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[t]]/24) + coef[,3]*cos(2*pi*X$time[index[t]]/24) + 
+        coef[,4]*X$temp[index[t]]
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      foo = apply(xi[index[t - 1], ] * Gamma, 2, max) * allprobs[index[t], ]
+      xi[index[t], ] = foo / sum(foo) 
+    }
+  }
+  iv <- numeric(n)
+  iv[n] <- which.max(xi[n, ]) 
+  for (t in (n - 1):1){
+    eta = coef[,1] + coef[,2]*sin(2*pi*X$time[t]/24) + coef[,3]*cos(2*pi*X$time[t]/24) + 
+      coef[,4]*X$temp[t]
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    iv[t] = which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
+  return(iv) 
+}
 
 
 viterbi_na_sn_cov3 = function(theta.star, X, N){
