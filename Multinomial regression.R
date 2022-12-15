@@ -1,5 +1,4 @@
 # Multinomial regression --------------------------------------------------
-library(fastDummies)
 library(nnet)
 
 data4$states = states
