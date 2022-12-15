@@ -17,7 +17,7 @@ t1 = Sys.time()
 mod8 = nlm(f = mllk_tod, p = theta.star0.tod, X = data4, N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8)
 Sys.time()-t1
 theta.star = mod8$estimate
-states = viterbi_tod(mod8$estimate, X = data2[1:5000,], N = 4)2*mllk_tod(mod8$estimate, X = data2[1:5000,], N = 4) + 2*length(mod8$estimate)
+states = viterbi_tod(mod8$estimate, X = data2[1:5000,], N = 4)
 
 # AIC
 2*mllk_tod(mod8$estimate, X = data2[1:5000,], N = 4) + 2*length(mod8$estimate)
@@ -115,3 +115,4 @@ for (i in 1:length(todseq2)){
           delta[3]*dsn(x, xi = xi[3], omega = omega[3], alpha = al[3])+
           delta[4]*dsn(x, xi = xi[4], omega = omega[4], alpha = al[4]), lty = "dashed", lwd = 2, add = T, n = 300)
 }
+
