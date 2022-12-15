@@ -46,10 +46,10 @@ todseq = seq(min(data4$time), max(data4$time), length.out = 500)
 h_delta = solve_gamma_tod(mod8$estimate, todseq, 4)
 
 par(mfrow = c(1,1))
-plot(todseq, delta[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "time of day")
-lines(todseq, delta[,2], lwd = 2, col = color[2])
-lines(todseq, delta[,3], lwd = 2, col = color[3])
-lines(todseq, delta[,4], lwd = 2, col = color[4])
+plot(todseq, h_delta[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "time of day")
+lines(todseq, h_delta[,2], lwd = 2, col = color[2])
+lines(todseq, h_delta[,3], lwd = 2, col = color[3])
+lines(todseq, h_delta[,4], lwd = 2, col = color[4])
 legend(15, 0.8, legend=c("State 1", "State 2", "State 3", "State 4"),
        col=color, lty = 1, cex=1, box.lwd = 0)
 
