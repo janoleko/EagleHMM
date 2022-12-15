@@ -1,18 +1,18 @@
-theta0.5 = c(Gamma[2:4,1], Gamma[c(1,3:4),2], Gamma[c(1:2,4),3], Gamma[1:3,4], rep(0,12),
-             1, 8, 15, 2, # mu.gamma
-             1, 4, 10, 2, # sigma.gamma
-             0.7, 10, 1, 3, # alphas
-             2, 55, 40, 40, # betas
-             0, 0.2, -0.2, 0.4, # xi
-             0.05, 0.5, 0.5, 0.5, # omega
-             0, 5, -5, 5, # al
-             1,1,1) # delta
-
-theta.star0.5 = c(theta0.5[1:24],
-                  log(theta0.5[25:40]),
-                  theta0.5[41:44],
-                  log(theta0.5[45:48]),
-                  theta0.5[49:55])
+# theta0.5 = c(Gamma[2:4,1], Gamma[c(1,3:4),2], Gamma[c(1:2,4),3], Gamma[1:3,4], rep(0,12),
+#              1, 8, 15, 2, # mu.gamma
+#              1, 4, 10, 2, # sigma.gamma
+#              0.7, 10, 1, 3, # alphas
+#              2, 55, 40, 40, # betas
+#              0, 0.2, -0.2, 0.4, # xi
+#              0.05, 0.5, 0.5, 0.5, # omega
+#              0, 5, -5, 5, # al
+#              1,1,1) # delta
+# 
+# theta.star0.5 = c(theta0.5[1:24],
+#                   log(theta0.5[25:40]),
+#                   theta0.5[41:44],
+#                   log(theta0.5[45:48]),
+#                   theta0.5[49:55])
 
 # t1 = Sys.time()
 # mod6 = nlm(f = mllk_na_sn_cov2, p = theta.star0.5, X = data2[1:5000,], N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8, hessian = T)

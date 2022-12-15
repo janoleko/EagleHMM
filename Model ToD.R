@@ -1,21 +1,24 @@
-theta0.tod = c(Gamma[2:4,1], Gamma[c(1,3:4),2], Gamma[c(1:2,4),3], Gamma[1:3,4], rep(0,24),
-               1, 8, 15, 2, # mu.gamma
-               1, 4, 10, 2, # sigma.gamma
-               0.7, 10, 1, 3, # alphas
-               2, 55, 40, 40, # betas
-               0, 0.2, -0.2, 0.4, # xi
-               0.05, 0.5, 0.5, 0.5, # omega
-               0, 5, -5, 5) # al
+# theta0.tod = c(Gamma[2:4,1], Gamma[c(1,3:4),2], Gamma[c(1:2,4),3], Gamma[1:3,4], rep(0,24),
+#                1, 8, 15, 2, # mu.gamma
+#                1, 4, 10, 2, # sigma.gamma
+#                0.7, 10, 1, 3, # alphas
+#                2, 55, 40, 40, # betas
+#                0, 0.2, -0.2, 0.4, # xi
+#                0.05, 0.5, 0.5, 0.5, # omega
+#                0, 5, -5, 5) # al
+# 
+# theta.star0.tod = c(theta0.tod[1:36],
+#                     log(theta0.tod[37:52]),
+#                     theta0.tod[53:56],
+#                     log(theta0.tod[57:60]),
+#                     theta0.tod[61:64])
 
-theta.star0.tod = c(theta0.tod[1:36],
-                    log(theta0.tod[37:52]),
-                    theta0.tod[53:56],
-                    log(theta0.tod[57:60]),
-                    theta0.tod[61:64])
+# t1 = Sys.time()
+# mod8 = nlm(f = mllk_tod, p = theta.star0.tod, X = data4, N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8)
+# Sys.time()-t1
 
-t1 = Sys.time()
-mod8 = nlm(f = mllk_tod, p = theta.star0.tod, X = data4, N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8)
-Sys.time()-t1
+mod8 = readRDS("mod8.rds")
+
 theta.star = mod8$estimate
 states = viterbi_tod(mod8$estimate, X = data2[1:5000,], N = 4)
 
