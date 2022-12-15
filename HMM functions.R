@@ -1,3 +1,5 @@
+library(sn)
+
 
 # HMM functions -----------------------------------------------------------
 
@@ -928,9 +930,9 @@ solve_gamma_tt1 = function(theta.star, tod, tempmean, N){
 
 solve_gamma_tt2 = function(theta.star, temp, todmean, N){
   coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
-  delta = matrix(data = NA, nrow = length(tod), ncol = N)
+  delta = matrix(data = NA, nrow = length(temp), ncol = N)
   
-  for (i in 1:length(tod)){
+  for (i in 1:length(temp)){
     eta = coef[,1] + coef[,2]*sin(2*pi*todmean/24) + coef[,3]*cos(2*pi*todmean/24) + coef[,4]*temp[i]
     Gamma = diag(N)
     Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
@@ -1010,9 +1012,9 @@ get_transprobs_tt1 = function(theta.star, tod, tempmean){
 get_transprobs_tt2 = function(theta.star, temp, todmean){
   N = 4
   coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
-  transprobs = matrix(data = NA, nrow = length(tod), ncol = N^2)
+  transprobs = matrix(data = NA, nrow = length(temp), ncol = N^2)
   
-  for (i in 1:length(tod)){
+  for (i in 1:length(temp)){
     eta = coef[,1] + coef[,2]*sin(2*pi*todmean/24) + coef[,3]*cos(2*pi*todmean/24) + coef[,4]*temp[i]
     Gamma = diag(N)
     Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
