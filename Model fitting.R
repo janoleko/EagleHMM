@@ -7,10 +7,7 @@ ider = read.csv("Ider_annotated.csv")
 colnames(ider)
 
 ider$height.fd = c(NA, diff(ider$height.above.msl))
-
-ider$turning2 = c(NA, diff(ider$heading*pi/180))
-
-View(cbind(d$angle, ider$turning2)[1:1000,])
+# ider$turning2 = c(NA, diff(ider$heading*pi/180))
 
 N = nrow(ider)/30
 
@@ -21,14 +18,10 @@ d$ID = "ID"
 colnames(d) = c("x", "y", "ID")
 d = prepData(d)
 
-
-# testen in prepData mit measurement ID
-
-
 index_stepNA <- (1:N)*30
 d$step[index_stepNA] <- NA # faster
 
-index_angleNA <- (1:N)*30+1
+index_angleNA <- (1:(N-1))*30+1
 d$angle[c(index_stepNA, index_angleNA)] <- NA
 
 # deleting wrong step lengths and angles
@@ -78,7 +71,23 @@ set.seed(123)
 data2$angle[which(data2$angle == 1)] = runif(length(data2$angle[which(data2$angle == 1)]), 0.98, 1)
 data2$angle[which(data2$angle == 0)] = runif(length(data2$angle[which(data2$angle == 0)]), 0, 0.02)
 data2$step[which(data2$step == 0)] = runif(length(data2$step[which(data2$step == 0)]), 0, 0.02)
-# vllt doch lieber zero mass gamma Verteilung??
+
+
+# Data prep done ----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # More EDA ----------------------------------------------------------------
@@ -309,7 +318,7 @@ states = viterbi_na_sn_cov(mod5$estimate, X = data2[1:5000,], N = 4)
 
 
 t1 = Sys.time()
-# mod6 = nlm(f = mllk_na_sn_cov2, p = theta.star0.5, X = data2[1:5000,], N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8, hessian = T)
+mod6 = nlm(f = mllk_na_sn_cov2, p = theta.star0.5, X = data2[1:5000,], N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8, hessian = T)
 mod6.1 = nlm(f = mllk_na_sn_cov2, p = theta.star0.5, X = data2[1:5000,], N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8, hessian = T)
 Sys.time()-t1
 theta.star = mod6$estimate
