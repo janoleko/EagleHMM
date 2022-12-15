@@ -441,6 +441,13 @@ mllk_tod = function(theta.star, X, N){
   return(-l) 
 }
 
+
+# Likelihood Funktion with:
+# - NA handling for turning angle
+# - Skew normal distribution for height.fd
+# - Seperate daily computation of the likelihood 
+# - Covariates: Temperature and Time of Day
+
 mllk_tt = function(theta.star, X, N){
   days = unique(X$day)
   numdays = length(days)
@@ -508,67 +515,6 @@ mllk_tt = function(theta.star, X, N){
   return(-l) 
 }
 
-
-
-mllk_na_sn_cov3 = function(theta.star, X, N){
-  coef = matrix(theta.star[1:(2*(N-1)*N)], (N-1)*N, 2)
-  
-  # gamma distribution: Step length
-  mu.g = exp(theta.star[2*(N-1)*N+1:N]) # means of gamma distributions
-  sigma.g = exp(theta.star[2*(N-1)*N+N+1:N]) # sds of gamma distributions
-  
-  # beta distribution: Turning angle/ pi
-  alpha = exp(theta.star[2*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
-  beta = exp(theta.star[2*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
-  
-  # normal distribution: Height first difference
-  xi = theta.star[2*(N-1)*N+4*N+1:N] # means of normal distributions
-  omega = exp(theta.star[2*(N-1)*N+5*N+1:N]) # sds of normal distributions
-  al = theta.star[2*(N-1)*N+6*N+1:N]
-  
-  delta = c(1, exp(theta.star[2*(N-1)*N+7*N+1:(N-1)]))
-  delta = delta/sum(delta)
-  
-  allprobs = matrix(1, nrow(X), N)
-  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd)) # Fragen wie wir das machen --> sonst immer gar keine Information nur weil in angle Zeitreihe so viele NAs
-  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
-  
-  for (j in 1:N){ # allprobs matrix
-    allprobs[ind1,j] =
-      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
-      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])* # beta
-      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
-    
-    allprobs[ind2,j] =
-      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
-      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
-  }
-  
-  days = unique(X$day)
-  numdays = length(days)
-  l = numeric(numdays)
-  # compute the daywise likelihoods seperately and sum up in the end
-  for(i in 1:numdays){
-    index = which(X$day == i)
-    
-    foo = delta%*%diag(allprobs[index[1],])
-    l[i] = log(sum(foo))
-    phi = foo/sum(foo)
-    
-    for (t in 2:length(index)){
-      eta = coef[,1] + coef[,2]*X$elevation[index[t]]
-      Gamma = diag(N)
-      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
-      Gamma = Gamma/rowSums(Gamma)
-      
-      foo = phi%*%Gamma%*%diag(allprobs[index[t],])
-      l[i] = l[i]+log(sum(foo))
-      phi = foo/sum(foo)
-    }
-  }
-  l = sum(l)
-  return(-l) 
-}
 
 
 # Viterbi functions -------------------------------------------------------
@@ -965,6 +911,37 @@ solve_gamma_tod = function(theta.star, tod, N){
   return(delta)
 }
 
+solve_gamma_tt1 = function(theta.star, tod, tempmean, N){
+  coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
+  delta = matrix(data = NA, nrow = length(tod), ncol = N)
+  
+  for (i in 1:length(tod)){
+    eta = coef[,1] + coef[,2]*sin(2*pi*tod[i]/24) + coef[,3]*cos(2*pi*tod[i]/24) + coef[,4]*tempmean
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    delta[i,] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-30)
+  }
+  return(delta)
+}
+
+solve_gamma_tt2 = function(theta.star, temp, todmean, N){
+  coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
+  delta = matrix(data = NA, nrow = length(tod), ncol = N)
+  
+  for (i in 1:length(tod)){
+    eta = coef[,1] + coef[,2]*sin(2*pi*todmean/24) + coef[,3]*cos(2*pi*todmean/24) + coef[,4]*temp[i]
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    delta[i,] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-30)
+  }
+  return(delta)
+}
+
+
 
 get_transprobs = function(theta.star, temp){
   N = 4
@@ -1009,8 +986,47 @@ get_transprobs_tod = function(theta.star, tod){
   return(transprobs)
 }
 
+get_transprobs_tt1 = function(theta.star, tod, tempmean){
+  N = 4
+  coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
+  transprobs = matrix(data = NA, nrow = length(tod), ncol = N^2)
+  
+  for (i in 1:length(tod)){
+    eta = coef[,1] + coef[,2]*sin(2*pi*tod[i]/24) + coef[,3]*cos(2*pi*tod[i]/24) + coef[,4]*tempmean
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    transprobs[i,] = c(Gamma[1,], Gamma[2,], Gamma[3,], Gamma[4,])
+  }
+  transprobs = as.data.frame(transprobs)
+  colnames(transprobs) = c("1 -> 1","1 -> 2", "1 -> 3", "1 -> 4",
+                           "2 -> 1", "2 -> 2", "2 -> 3", "2 -> 4",
+                           "3 -> 1", "3 -> 2", "3 -> 3", "3 -> 4",
+                           "4 -> 1", "4 -> 2", "4 -> 3", "4 -> 4")
+  return(transprobs)
+}
 
-
+get_transprobs_tt2 = function(theta.star, temp, todmean){
+  N = 4
+  coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
+  transprobs = matrix(data = NA, nrow = length(tod), ncol = N^2)
+  
+  for (i in 1:length(tod)){
+    eta = coef[,1] + coef[,2]*sin(2*pi*todmean/24) + coef[,3]*cos(2*pi*todmean/24) + coef[,4]*temp[i]
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    transprobs[i,] = c(Gamma[1,], Gamma[2,], Gamma[3,], Gamma[4,])
+  }
+  transprobs = as.data.frame(transprobs)
+  colnames(transprobs) = c("1 -> 1","1 -> 2", "1 -> 3", "1 -> 4",
+                           "2 -> 1", "2 -> 2", "2 -> 3", "2 -> 4",
+                           "3 -> 1", "3 -> 2", "3 -> 3", "3 -> 4",
+                           "4 -> 1", "4 -> 2", "4 -> 3", "4 -> 4")
+  return(transprobs)
+}
 
 
 viterbi_na_sn = function(theta.star, X, N){
