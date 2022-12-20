@@ -72,3 +72,68 @@ for (i in 1:16){
        type = "l", lwd = 2, col = color[st])
 }
 
+
+# Marginal distribution with relative state frequencies
+
+delta_star = c(sum(states == 1), sum(states == 2), sum(states == 3), sum(states == 4))
+delta_star = delta_star/sum(delta_star)
+
+# getting the parameters:
+N = 4
+coef = matrix(theta.star[1:(2*(N-1)*N)], (N-1)*N, 2)
+mu.g = exp(theta.star[2*(N-1)*N+1:N]) # means of gamma distributions
+sigma.g = exp(theta.star[2*(N-1)*N+N+1:N]) # sds of gamma distributions
+alpha = exp(theta.star[2*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+beta = exp(theta.star[2*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+xi = theta.star[2*(N-1)*N+4*N+1:N] # means of normal distributions
+omega = exp(theta.star[2*(N-1)*N+5*N+1:N]) # sds of normal distributions
+al = theta.star[2*(N-1)*N+6*N+1:N]
+
+par(mfrow = c(1,1))
+
+# Step length
+hist(data4$step, prob = T, breaks = 100, main = "Histogram of Step length", xlab = "Step length")
+curve(delta_star[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1]), add = T, lwd = 2, col = color[1], n = 500)
+curve(delta_star[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2]), add = T, lwd = 2, col = color[2], n = 500)
+curve(delta_star[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3]), add = T, lwd = 2, col = color[3], n = 500)
+curve(delta_star[4]*dgamma(x, shape = mu.g[4]^2/sigma.g[4]^2, scale = sigma.g[4]^2/mu.g[4]), add = T, lwd = 2, col = color[4], n = 500)
+
+curve(
+  delta_star[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1])+
+    delta_star[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2])+ 
+    delta_star[3]*dgamma(x, shape = mu.g[3]^2/sigma.g[3]^2, scale = sigma.g[3]^2/mu.g[3])+
+    delta_star[4]*dgamma(x, shape = mu.g[4]^2/sigma.g[4]^2, scale = sigma.g[4]^2/mu.g[4]),
+  add = T, lty = "dashed", lwd = 2, n = 500
+)
+
+# Turning angle
+hist(data4$angle, prob = T, breaks = 50, main = "Histogram of Turning angle", xlab = "Turning angle", xlim = c(0,1))
+curve(delta_star[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1]), add = T, lwd = 2, col = color[1], n = 500)
+curve(delta_star[2]*dbeta(x, shape1 = alpha[2], shape2 = beta[2]), add = T, lwd = 2, col = color[2], n = 500)
+curve(delta_star[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3]), add = T, lwd = 2, col = color[3], n = 500)
+curve(delta_star[4]*dbeta(x, shape1 = alpha[4], shape2 = beta[4]), add = T, lwd = 2, col = color[4], n = 500)
+
+curve(
+  delta_star[1]*dbeta(x, shape1 = alpha[1], shape2 = beta[1])+
+    delta_star[2]*dbeta(x, shape1 = alpha[2], shape2 = beta[2])+
+    delta_star[3]*dbeta(x, shape1 = alpha[3], shape2 = beta[3])+
+    delta_star[4]*dbeta(x, shape1 = alpha[4], shape2 = beta[4]),
+  add = T, lty = "dashed", lwd = 2
+)
+# vllt noch bessere Startwerte für State 2?
+
+# Height (fd.)
+hist(data4$height.fd, prob = T, breaks = 190, main = "Histogram of Height (fd.)", xlab = "Height (fd.)", xlim = c(-5,5), ylim = c(0, 1.8))
+curve(delta_star[1]*dsn(x, xi[1], omega[1], al[1]), add = T, lwd = 2, col = color[1], n = 1000)
+curve(delta_star[2]*dsn(x, xi[2], omega[2], al[2]), add = T, lwd = 2, col = color[2])
+curve(delta_star[3]*dsn(x, xi[3], omega[3], al[3]), add = T, lwd = 2, col = color[3])
+curve(delta_star[4]*dsn(x, xi[4], omega[4], al[4]), add = T, lwd = 2, col = color[4])
+
+curve(
+  delta_star[1]*dsn(x, xi[1], omega[1], al[1])+
+    delta_star[2]*dsn(x, xi[2], omega[2], al[2])+
+    delta_star[3]*dsn(x, xi[3], omega[3], al[3])+
+    delta_star[4]*dsn(x, xi[4], omega[4], al[4]),
+  add = T, lty = "dashed", lwd = 2, n = 1000
+)
+
