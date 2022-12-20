@@ -1,5 +1,6 @@
 library(moveHMM)
 library(tidyverse)
+library(sn)
 
 # Load in the data --------------------------------------------------------
 setwd("/Users/jan-ole/R/HMM Project")
@@ -19,7 +20,7 @@ colnames(d) = c("x", "y", "ID")
 d = prepData(d)
 
 index_stepNA <- (1:N)*30
-d$step[index_stepNA] <- NA # faster
+d$step[index_stepNA] <- NA
 
 index_angleNA <- (1:(N-1))*30+1
 d$angle[c(index_stepNA, index_angleNA)] <- NA
@@ -274,6 +275,7 @@ mllk_na_sn(theta.star0.2, X = data2, N = 3)
 t1 = Sys.time()
 mod2 = nlm(f = mllk_na_sn, p = theta.star0.2, X = data2, N = 3, print.level = 2, iterlim = 1000, steptol = 1e-8)
 Sys.time()-t1
+mod2 = readRDS("mod2.rds")
 theta.star = mod2$estimate
 states = viterbi_na_sn(theta.star, data2, N = 3)
 
@@ -303,6 +305,7 @@ states = viterbi_na_sn(theta.star, data2, N = 4)
 t1 = Sys.time()
 mod2.4_3 = nlm(f = mllk_na_sn, p = theta.star0.2.4_, X = data2[1:5000,], N = 4, print.level = 2, iterlim = 1000, steptol = 1e-8)
 Sys.time()-t1
+mod2.4_3 = readRDS("mod2.4_3.rds")
 theta.star = mod2.4_3$estimate
 data4 = data2[1:5000,]
 states = viterbi_na_sn(theta.star, data4, N = 4)
