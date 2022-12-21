@@ -11,3 +11,10 @@ data5$elevation.fd = c(NA, diff(data5$elevation))
 m = multinom(states ~ l_ + temp + elevation, data = data5)
 summary(m)
 
+
+library(fastDummies)
+help(package = "fastDummies")
+datadummy = dummy_cols(data4, select_columns = "landform.type", remove_first_dummy = TRUE)
+colnames(datadummy)[20:24] = c("lower_slope", "mountain_divide", "peak_ridge", "upper_slope", "valley")
+
+
