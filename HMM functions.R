@@ -792,9 +792,7 @@ viterbi_tt = function(theta.star, X, N){
     Gamma = diag(N)
     Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
     Gamma = Gamma/rowSums(Gamma)
-    delta = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-18)
-    
-    # vllt statt delta die hypothetische stationary zu Tagesbeginn oder gleichverteilt
+
     foo = delta * allprobs[index[1], ]
     xi[index[1], ] = foo / sum(foo)
     
@@ -820,6 +818,90 @@ viterbi_tt = function(theta.star, X, N){
     
     iv[t] = which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
   return(iv) 
+}
+
+
+viterbi_landform = function(theta.star, X, N){
+  n = nrow(X)
+  days = unique(X$day)
+  numdays = length(days)
+  
+  coef = matrix(theta.star[1:(6*(N-1)*N)], (N-1)*N, 6)
+  
+  # gamma distribution: Step length
+  mu.g = exp(theta.star[6*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[6*(N-1)*N+N+1:N]) # sds of gamma distributions
+  
+  # beta distribution: Turning angle/ pi
+  alpha = exp(theta.star[6*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[6*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  
+  # skew normal distribution: Height first difference
+  xi = theta.star[6*(N-1)*N+4*N+1:N] # means of normal distributions
+  omega = exp(theta.star[6*(N-1)*N+5*N+1:N]) # sds of normal distributions
+  al = theta.star[6*(N-1)*N+6*N+1:N]
+  
+  delta = c(1, exp(theta.star[6*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd)) # Fragen wie wir das machen --> sonst immer gar keine Information nur weil in angle Zeitreihe so viele NAs
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])* # beta
+      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+    
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+  }
+  
+  xi = matrix(0, n, ncol = N)
+  
+  for(i in 1:numdays){
+    index = which(X$day == i)
+    
+    eta = coef[,1] + coef[,2]*X$lower_slope[index[1]] + coef[,3]*X$mountain_divide[index[1]] + 
+      coef[,4]*X$peak_ridge[index[1]] + coef[,5]*X$upper_slope[index[1]] + 
+      coef[,6]*X$valley[index[1]]
+    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+
+    # vllt statt delta die hypothetische stationary zu Tagesbeginn oder gleichverteilt
+    foo = delta * allprobs[index[1], ]
+    xi[index[1], ] = foo / sum(foo)
+    
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*X$lower_slope[index[t]] + coef[,3]*X$mountain_divide[index[t]] + 
+        coef[,4]*X$peak_ridge[index[t]] + coef[,5]*X$upper_slope[index[t]] + 
+        coef[,6]*X$valley[index[t]]
+      
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      foo = apply(xi[index[t - 1], ] * Gamma, 2, max) * allprobs[index[t], ]
+      xi[index[t], ] = foo / sum(foo) 
+    }
+  }
+  iv <- numeric(n)
+  iv[n] <- which.max(xi[n, ]) 
+  for (t in (n - 1):1){
+    eta = coef[,1] + coef[,2]*X$lower_slope[t] + coef[,3]*X$mountain_divide[t] + 
+      coef[,4]*X$peak_ridge[t] + coef[,5]*X$upper_slope[t] + 
+      coef[,6]*X$valley[t]
+    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    iv[t] = which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
+  return(iv)
 }
 
 
@@ -1016,6 +1098,29 @@ solve_gamma_tt2 = function(theta.star, temp, todmean, N){
 }
 
 
+solve_gamma_landform = function(theta.star, N){
+  landform = c("C", "LS", "MD", "PR", "US", "V")
+  coef = matrix(theta.star[1:(6*(N-1)*N)], (N-1)*N, 6)
+  delta = matrix(data = NA, nrow = length(landform), ncol = N)
+  
+  eta = coef[,1] 
+  Gamma = diag(N)
+  Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+  Gamma = Gamma/rowSums(Gamma)
+  
+  delta[1,] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-18)
+  
+  for (i in 2:length(landform)){
+    eta = coef[,1] + coef[,i]
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    delta[i,] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-18)
+  }
+  return(list(landform = as.factor(landform), delta = delta))
+}
+
 
 get_transprobs = function(theta.star, temp){
   N = 4
@@ -1102,6 +1207,34 @@ get_transprobs_tt2 = function(theta.star, temp, todmean){
   return(transprobs)
 }
 
+
+get_transprobs_landform = function(theta.star){
+  N = 4
+  landform = c("C", "LS", "MD", "PR", "US", "V")
+  coef = matrix(theta.star[1:(6*(N-1)*N)], (N-1)*N, 6)
+  transprobs = matrix(data = NA, nrow = length(landform), ncol = N^2)
+  
+  eta = coef[,1]
+  Gamma = diag(N)
+  Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+  Gamma = Gamma/rowSums(Gamma)
+  transprobs[1,] = c(Gamma[1,], Gamma[2,], Gamma[3,], Gamma[4,])
+  
+  for (i in 2:length(landform)){
+    eta = coef[,1] + coef[,i]
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    transprobs[i,] = c(Gamma[1,], Gamma[2,], Gamma[3,], Gamma[4,])
+  }
+  transprobs = as.data.frame(transprobs)
+  colnames(transprobs) = c("1 -> 1","1 -> 2", "1 -> 3", "1 -> 4",
+                           "2 -> 1", "2 -> 2", "2 -> 3", "2 -> 4",
+                           "3 -> 1", "3 -> 2", "3 -> 3", "3 -> 4",
+                           "4 -> 1", "4 -> 2", "4 -> 3", "4 -> 4")
+  return(list(landform = as.factor(landform), transprobs = transprobs))
+}
 
 viterbi_na_sn = function(theta.star, X, N){
   n = nrow(X)
