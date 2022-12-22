@@ -36,7 +36,7 @@ color = c("deepskyblue", "orange", "springgreen4", "dodgerblue3")
 
 data4 = data2[1:5000,]
 par(mfrow = c(3,1))
-plot(data4$step[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Step lenght")
+plot(data4$step[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Step length")
 legend(x = 4700, y = 30, legend=c("State 1", "State 2", "State 3", "State 4"),
        col=color, lty = 1, cex=1)
 plot(data4$angle[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Turning angle")
