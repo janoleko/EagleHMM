@@ -22,3 +22,6 @@ t1 = Sys.time()
 mod11 = nlm(f = mllk_ttl, p = theta.star0.ttl, X = data5, N = 4, print.level = 2, iterlim = 2000, steptol = 1e-15)
 Sys.time()-t1
 theta.star = mod11$estimate
+
+2*mllk_ttl(mod11$estimate, data5, N = 4) + 2*length(mod11$estimate)
+2*mllk_ttl(mod11$estimate, data5, N = 4) + log(nrow(data5))*length(mod11$estimate)
