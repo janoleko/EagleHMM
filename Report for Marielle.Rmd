@@ -14,8 +14,19 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r, echo = FALSE, message = FALSE}
-# defining all functions:
+# defining all functions
 library(sn)
+
+# HMM functions -----------------------------------------------------------
+
+zgamma_scalar = function(x, mu, sigma, p){
+  if(x == 0){return(p)}
+  else{return((1-p)*dgamma(x, shape = mu^2/sigma^2, scale = sigma^2/mu))}
+}
+zgamma = function(x, mu, sigma, p){
+  return(sapply(x, zgamma_scalar, mu = mu, sigma = sigma, p = p))
+}
+
 
 # Likelihoods -------------------------------------------------------------
 
@@ -523,6 +534,145 @@ mllk_tt = function(theta.star, X, N){
 }
 
 
+mllk_landform = function(theta.star, X, N){
+  days = unique(X$day)
+  numdays = length(days)
+  
+  coef = matrix(theta.star[1:(6*(N-1)*N)], (N-1)*N, 6)
+  
+  # gamma distribution: Step length
+  mu.g = exp(theta.star[6*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[6*(N-1)*N+N+1:N]) # sds of gamma distributions
+  
+  # beta distribution: Turning angle/ pi
+  alpha = exp(theta.star[6*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[6*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  
+  # skew normal distribution: Height first difference
+  xi = theta.star[6*(N-1)*N+4*N+1:N] # means of normal distributions
+  omega = exp(theta.star[6*(N-1)*N+5*N+1:N]) # sds of normal distributions
+  al = theta.star[6*(N-1)*N+6*N+1:N]
+  
+  delta = c(1, exp(theta.star[6*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd)) # Fragen wie wir das machen --> sonst immer gar keine Information nur weil in angle Zeitreihe so viele NAs
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])* # beta
+      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+    
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+  }
+  
+  # forward algorithm to compute the log-likelihood
+  l = numeric(numdays)
+  # compute the daywise likelihoods seperately and sum up in the end
+  for(i in 1:numdays){
+    index = which(X$day == i)
+    
+    eta = coef[,1] + coef[,2]*X$lower_slope[index[1]] + coef[,3]*X$mountain_divide[index[1]] + 
+      coef[,4]*X$peak_ridge[index[1]] + coef[,5]*X$upper_slope[index[1]] + 
+      coef[,6]*X$valley[index[1]]
+    
+    # vllt statt delta die hypothetische stationary zu Tagesbeginn oder gleichverteilt
+    foo = delta%*%diag(allprobs[index[1],])
+    l[i] = log(sum(foo))
+    phi = foo/sum(foo)
+    
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*X$lower_slope[index[t]] + coef[,3]*X$mountain_divide[index[t]] + 
+        coef[,4]*X$peak_ridge[index[t]] + coef[,5]*X$upper_slope[index[t]] + 
+        coef[,6]*X$valley[index[t]]
+      
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      foo = phi%*%Gamma%*%diag(allprobs[index[t],])
+      l[i] = l[i]+log(sum(foo))
+      phi = foo/sum(foo)
+    }
+  }
+  l = sum(l)
+  return(-l) 
+}
+
+
+
+mllk_ttl = function(theta.star, X, N){
+  numdays = max(X$day)
+  
+  coef = matrix(theta.star[1:(9*(N-1)*N)], (N-1)*N, 9)
+  
+  # gamma distribution: Step length
+  mu.g = exp(theta.star[9*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[9*(N-1)*N+N+1:N]) # sds of gamma distributions
+  
+  # beta distribution: Turning angle/ pi
+  alpha = exp(theta.star[9*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[9*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  
+  # skew normal distribution: Height first difference
+  xi = theta.star[9*(N-1)*N+4*N+1:N] # means of normal distributions
+  omega = exp(theta.star[9*(N-1)*N+5*N+1:N]) # sds of normal distributions
+  al = theta.star[9*(N-1)*N+6*N+1:N]
+  
+  delta = c(1, exp(theta.star[9*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd)) # Fragen wie wir das machen --> sonst immer gar keine Information nur weil in angle Zeitreihe so viele NAs
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])* # beta
+      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+  }
+  
+  # forward algorithm to compute the log-likelihood
+  l = numeric(numdays)
+  # compute the daywise likelihoods seperately and sum up in the end
+  for(i in 1:numdays){
+    index = which(X$day == i)
+    
+    eta = coef[,1] + coef[,2]*X$lower_slope[index[1]] + coef[,3]*X$mountain_divide[index[1]] + coef[,4]*X$peak_ridge[index[1]] + coef[,5]*X$upper_slope[index[1]] + coef[,6]*X$valley[index[1]] +
+      coef[,7]*X$temp[index[1]] + coef[,8]*sin(2*pi*X$time[index[1]]/24) + coef[,9]*cos(2*pi*X$time[index[1]]/24)
+    
+    # vllt statt delta die hypothetische stationary zu Tagesbeginn oder gleichverteilt
+    foo = delta%*%diag(allprobs[index[1],])
+    l[i] = log(sum(foo))
+    phi = foo/sum(foo)
+    
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*X$lower_slope[index[t]] + coef[,3]*X$mountain_divide[index[t]] + coef[,4]*X$peak_ridge[index[t]] + coef[,5]*X$upper_slope[index[t]] + coef[,6]*X$valley[index[t]] +
+        coef[,7]*X$temp[index[t]] + coef[,8]*sin(2*pi*X$time[index[t]]/24) + coef[,9]*cos(2*pi*X$time[index[t]]/24)
+      
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      foo = phi%*%Gamma%*%diag(allprobs[index[t],])
+      l[i] = l[i]+log(sum(foo))
+      phi = foo/sum(foo)
+    }
+  }
+  l = sum(l)
+  return(-l) 
+}
+
+
 
 # Viterbi functions -------------------------------------------------------
 
@@ -725,9 +875,7 @@ viterbi_tt = function(theta.star, X, N){
     Gamma = diag(N)
     Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
     Gamma = Gamma/rowSums(Gamma)
-    delta = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-18)
-    
-    # vllt statt delta die hypothetische stationary zu Tagesbeginn oder gleichverteilt
+
     foo = delta * allprobs[index[1], ]
     xi[index[1], ] = foo / sum(foo)
     
@@ -747,6 +895,171 @@ viterbi_tt = function(theta.star, X, N){
   for (t in (n - 1):1){
     eta = coef[,1] + coef[,2]*sin(2*pi*X$time[t]/24) + coef[,3]*cos(2*pi*X$time[t]/24) + 
       coef[,4]*X$temp[t]
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    iv[t] = which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
+  return(iv) 
+}
+
+
+viterbi_landform = function(theta.star, X, N){
+  n = nrow(X)
+  days = unique(X$day)
+  numdays = length(days)
+  
+  coef = matrix(theta.star[1:(6*(N-1)*N)], (N-1)*N, 6)
+  
+  # gamma distribution: Step length
+  mu.g = exp(theta.star[6*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[6*(N-1)*N+N+1:N]) # sds of gamma distributions
+  
+  # beta distribution: Turning angle/ pi
+  alpha = exp(theta.star[6*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[6*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  
+  # skew normal distribution: Height first difference
+  xi = theta.star[6*(N-1)*N+4*N+1:N] # means of normal distributions
+  omega = exp(theta.star[6*(N-1)*N+5*N+1:N]) # sds of normal distributions
+  al = theta.star[6*(N-1)*N+6*N+1:N]
+  
+  delta = c(1, exp(theta.star[6*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd)) # Fragen wie wir das machen --> sonst immer gar keine Information nur weil in angle Zeitreihe so viele NAs
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])* # beta
+      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+    
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+  }
+  
+  xi = matrix(0, n, ncol = N)
+  
+  for(i in 1:numdays){
+    index = which(X$day == i)
+    
+    eta = coef[,1] + coef[,2]*X$lower_slope[index[1]] + coef[,3]*X$mountain_divide[index[1]] + 
+      coef[,4]*X$peak_ridge[index[1]] + coef[,5]*X$upper_slope[index[1]] + 
+      coef[,6]*X$valley[index[1]]
+    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+
+    # vllt statt delta die hypothetische stationary zu Tagesbeginn oder gleichverteilt
+    foo = delta * allprobs[index[1], ]
+    xi[index[1], ] = foo / sum(foo)
+    
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*X$lower_slope[index[t]] + coef[,3]*X$mountain_divide[index[t]] + 
+        coef[,4]*X$peak_ridge[index[t]] + coef[,5]*X$upper_slope[index[t]] + 
+        coef[,6]*X$valley[index[t]]
+      
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      foo = apply(xi[index[t - 1], ] * Gamma, 2, max) * allprobs[index[t], ]
+      xi[index[t], ] = foo / sum(foo) 
+    }
+  }
+  iv <- numeric(n)
+  iv[n] <- which.max(xi[n, ]) 
+  for (t in (n - 1):1){
+    eta = coef[,1] + coef[,2]*X$lower_slope[t] + coef[,3]*X$mountain_divide[t] + 
+      coef[,4]*X$peak_ridge[t] + coef[,5]*X$upper_slope[t] + 
+      coef[,6]*X$valley[t]
+    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    iv[t] = which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
+  return(iv)
+}
+
+
+viterbi_ttl = function(theta.star, X, N){
+  n = nrow(X)
+  numdays = max(X$day)
+  
+  coef = matrix(theta.star[1:(9*(N-1)*N)], (N-1)*N, 9)
+  
+  # gamma distribution: Step length
+  mu.g = exp(theta.star[9*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[9*(N-1)*N+N+1:N]) # sds of gamma distributions
+  
+  # beta distribution: Turning angle/ pi
+  alpha = exp(theta.star[9*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[9*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  
+  # skew normal distribution: Height first difference
+  xi = theta.star[9*(N-1)*N+4*N+1:N] # means of normal distributions
+  omega = exp(theta.star[9*(N-1)*N+5*N+1:N]) # sds of normal distributions
+  al = theta.star[9*(N-1)*N+6*N+1:N]
+  
+  delta = c(1, exp(theta.star[9*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd)) # Fragen wie wir das machen --> sonst immer gar keine Information nur weil in angle Zeitreihe so viele NAs
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])* # beta
+      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
+      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+  }
+  
+  xi = matrix(0, n, ncol = N)
+  
+  for(i in 1:numdays){
+    index = which(X$day == i)
+    
+    eta = coef[,1] + coef[,2]*X$lower_slope[index[1]] + coef[,3]*X$mountain_divide[index[1]] + coef[,4]*X$peak_ridge[index[1]] + coef[,5]*X$upper_slope[index[1]] + coef[,6]*X$valley[index[1]] +
+      coef[,7]*X$temp[index[1]] + coef[,8]*sin(2*pi*X$time[index[1]]/24) + coef[,9]*cos(2*pi*X$time[index[1]]/24)
+    
+    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    # vllt statt delta die hypothetische stationary zu Tagesbeginn oder gleichverteilt
+    foo = delta * allprobs[index[1], ]
+    xi[index[1], ] = foo / sum(foo)
+    
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*X$lower_slope[index[t]] + coef[,3]*X$mountain_divide[index[t]] + coef[,4]*X$peak_ridge[index[t]] + coef[,5]*X$upper_slope[index[t]] + coef[,6]*X$valley[index[t]] +
+        coef[,7]*X$temp[index[t]] + coef[,8]*sin(2*pi*X$time[index[t]]/24) + coef[,9]*cos(2*pi*X$time[index[t]]/24)
+      
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      foo = apply(xi[index[t - 1], ] * Gamma, 2, max) * allprobs[index[t], ]
+      xi[index[t], ] = foo / sum(foo) 
+    }
+  }
+  iv <- numeric(n)
+  iv[n] <- which.max(xi[n, ]) 
+  for (t in (n - 1):1){
+    eta = coef[,1] + coef[,2]*X$lower_slope[t] + coef[,3]*X$mountain_divide[t] + coef[,4]*X$peak_ridge[t] + coef[,5]*X$upper_slope[t] + coef[,6]*X$valley[t] +
+      coef[,7]*X$temp[t] + coef[,8]*sin(2*pi*X$time[t]/24) + coef[,9]*cos(2*pi*X$time[t]/24)
+    
+    
     Gamma = diag(N)
     Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
     Gamma = Gamma/rowSums(Gamma)
@@ -949,6 +1262,86 @@ solve_gamma_tt2 = function(theta.star, temp, todmean, N){
 }
 
 
+solve_gamma_landform = function(theta.star, N){
+  landform = c("C", "LS", "MD", "PR", "US", "V")
+  coef = matrix(theta.star[1:(6*(N-1)*N)], (N-1)*N, 6)
+  delta = matrix(data = NA, nrow = length(landform), ncol = N)
+  
+  eta = coef[,1] 
+  Gamma = diag(N)
+  Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+  Gamma = Gamma/rowSums(Gamma)
+  
+  delta[1,] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-18)
+  
+  for (i in 2:length(landform)){
+    eta = coef[,1] + coef[,i]
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    delta[i,] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-18)
+  }
+  return(list(landform = as.factor(landform), delta = delta))
+}
+
+
+solve_gamma_ttl1 = function(theta.star, tod, tempmean, N){
+  coef = matrix(theta.star[1:(9*(N-1)*N)], (N-1)*N, 9)
+  delta = matrix(data = NA, nrow = length(tod), ncol = N*6)
+  
+  for (i in 1:length(tod)){
+    eta = coef[,1] + 
+      coef[,7]*tempmean + coef[,8]*sin(2*pi*tod[i]/24) + coef[,9]*cos(2*pi*tod[i]/24)
+    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    delta[i,1:4] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-30)
+    
+    for (j in 2:6){
+      eta = coef[,1] + coef[,j] +
+        coef[,7]*tempmean + coef[,8]*sin(2*pi*tod[i]/24) + coef[,9]*cos(2*pi*tod[i]/24)
+      
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      delta[i,(j-1)*4+1:4] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-30)
+    }
+  }
+  return(delta)
+}
+
+solve_gamma_ttl2 = function(theta.star, temp, todmean, N){
+  coef = matrix(theta.star[1:(9*(N-1)*N)], (N-1)*N, 9)
+  delta = matrix(data = NA, nrow = length(temp), ncol = N*6)
+  
+  for (i in 1:length(temp)){
+    eta = coef[,1] + 
+      coef[,7]*temp[i] + coef[,8]*sin(2*pi*todmean/24) + coef[,9]*cos(2*pi*todmean/24)
+    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    delta[i,1:4] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-30)
+    
+    for (j in 2:6){
+      eta = coef[,1] + coef[,j] +
+      coef[,7]*temp[i] + coef[,8]*sin(2*pi*todmean/24) + coef[,9]*cos(2*pi*todmean/24)
+      
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      delta[i,(j-1)*4+1:4] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-30)
+    }
+  }
+  return(delta)
+}
+
 
 get_transprobs = function(theta.star, temp){
   N = 4
@@ -1034,6 +1427,69 @@ get_transprobs_tt2 = function(theta.star, temp, todmean){
                            "4 -> 1", "4 -> 2", "4 -> 3", "4 -> 4")
   return(transprobs)
 }
+
+
+get_transprobs_landform = function(theta.star){
+  N = 4
+  landform = c("C", "LS", "MD", "PR", "US", "V")
+  coef = matrix(theta.star[1:(6*(N-1)*N)], (N-1)*N, 6)
+  transprobs = matrix(data = NA, nrow = length(landform), ncol = N^2)
+  
+  eta = coef[,1]
+  Gamma = diag(N)
+  Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+  Gamma = Gamma/rowSums(Gamma)
+  transprobs[1,] = c(Gamma[1,], Gamma[2,], Gamma[3,], Gamma[4,])
+  
+  for (i in 2:length(landform)){
+    eta = coef[,1] + coef[,i]
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    transprobs[i,] = c(Gamma[1,], Gamma[2,], Gamma[3,], Gamma[4,])
+  }
+  transprobs = as.data.frame(transprobs)
+  colnames(transprobs) = c("1 -> 1","1 -> 2", "1 -> 3", "1 -> 4",
+                           "2 -> 1", "2 -> 2", "2 -> 3", "2 -> 4",
+                           "3 -> 1", "3 -> 2", "3 -> 3", "3 -> 4",
+                           "4 -> 1", "4 -> 2", "4 -> 3", "4 -> 4")
+  return(list(landform = as.factor(landform), transprobs = transprobs))
+}
+
+
+get_transprobs_ttl1 = function(theta.star, tod, tempmean){
+  N = 4
+  coef = matrix(theta.star[1:(9*(N-1)*N)], (N-1)*N, 9)
+  transprobs = matrix(data = NA, nrow = 6*length(tod), ncol = N^2)
+  
+  for (i in 1:length(tod)){
+    eta = coef[,1] + 
+      coef[,7]*tempmean + coef[,8]*sin(2*pi*tod[i]/24) + coef[,9]*cos(2*pi*tod[i]/24)    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    transprobs[(i-1)*6+1,] = c(Gamma[1,], Gamma[2,], Gamma[3,], Gamma[4,])
+    
+    for (j in 2:6){
+      eta = coef[,1] + coef[,j] +
+        coef[,7]*tempmean + coef[,8]*sin(2*pi*tod[i]/24) + coef[,9]*cos(2*pi*tod[i]/24)
+        Gamma = diag(N)
+        Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+        Gamma = Gamma/rowSums(Gamma)
+        
+        transprobs[(i-1)*6+j,] = c(Gamma[1,], Gamma[2,], Gamma[3,], Gamma[4,])
+    }
+  }
+  transprobs = as.data.frame(transprobs)
+  colnames(transprobs) = c("1 -> 1","1 -> 2", "1 -> 3", "1 -> 4",
+                           "2 -> 1", "2 -> 2", "2 -> 3", "2 -> 4",
+                           "3 -> 1", "3 -> 2", "3 -> 3", "3 -> 4",
+                           "4 -> 1", "4 -> 2", "4 -> 3", "4 -> 4")
+  return(transprobs)
+}
+
 
 
 viterbi_na_sn = function(theta.star, X, N){
@@ -1230,6 +1686,7 @@ viterbi = function(theta.star, X, N){
     iv[t] <- which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
   return(iv)
 }
+
 ```
 
 
@@ -1357,7 +1814,7 @@ This made a 3 state HMM look reasonable with states:
 * State 2: Gliding/ flying
 * State 3: Resting
 
-We formulated this model without covariates and fitted it to the first 5000 observations (which is a one way trans-himalayan migration). Which results in the transition probabilities and stationary distribution:
+We formulated this model without covariates and fitted it to the first 5000 observations (which is a one-way trans-himalayan migration). Which results in the transition probabilities and stationary distribution:
 
 ```{r, echo = FALSE, message = FALSE}
 mod2 = readRDS("mod2.rds")
@@ -1428,7 +1885,7 @@ curve(
 ```
 
 
-Here we can observe a lack of fit as the model overestimates how often step lenghts of 2-6 meters should appear.
+Here we can observe a lack of fit as the model overestimates how often step lengths of 2-6 meters should appear.
 
 
 ```{r, echo = FALSE}
@@ -1471,7 +1928,7 @@ The model often also decodes upward movement as state 2 which should reflect onl
 
 ### 4 state Model without covariates
 
-First we fitted a four state HMM without covariates with the aim at finding a model that better seperates states 2 and 3. This yielded the following results:
+First we fitted a four state HMM without covariates with the aim of finding a model that better seperates states 2 and 3. This yielded the following results:
 
 ```{r, echo = FALSE, message=FALSE, results=FALSE}
 mod2.4_2 = readRDS("mod2.4_2.rds")
@@ -1530,7 +1987,7 @@ curve(
 ```
 
 
-The fourth state fixes the problem with overestimation of step lengths between 2 and 6 meters so it seems to be necessary.
+The fourth state fixes the problem with overestimation of step lengths between 2 and 6 meters so it seems to be necessary. This points us to the fact that there is a fourth behaviour which is "active resting" that the 3 state model could not capture appropriately. More on this later.
 
 <br>
 
@@ -1621,7 +2078,7 @@ plot(data4$height.fd[1:5000], pch = 20, col = color[states[1:5000]], ylab = "hei
 
 This model seperates states 2 and 3 even better. Overall however the decoded states have not changed much. 
 
-We can now look at the hypothetical stationary state distribution depending on the external temperature:
+We can now look at the hypothetical stationary state distribution as well as the transition probabilities depending on the external temperature:
 
 ```{r, echo = FALSE}
 tempseq = seq(from = min(data4$temp),to = max(data4$temp), length.out = 500)
@@ -1883,7 +2340,7 @@ par(mfrow = c(3,1))
 par(mar = c(2,4,1.5,1))
 
 plot(data4$step[1:5000], pch = 20, col = color[states[1:5000]], ylab = "step length")
-legend(x = 4700, y = 30, legend=c("State 1", "State 2", "State 3", "State 4"),
+legend(x = 4500, y = 30, legend=c("State 1", "State 2", "State 3", "State 4"),
        col=color, lty = 1, cex=1)
 plot(data4$angle[1:5000], pch = 20, col = color[states[1:5000]], ylab = "turning angle")
 plot(data4$height.fd[1:5000], pch = 20, col = color[states[1:5000]], ylab = "height (fd.)")
@@ -1902,7 +2359,7 @@ h_delta2 = solve_gamma_tt2(mod9$estimate, tempseq, mean(data4$time), 4)
 
 # Plot for time of day
 par(mfrow = c(1,2))
-plot(todseq, h_delta1[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,1), main = "hypothetical stationary distribution", ylab = "stationary state probabilities", xlab = "time of day")
+plot(todseq, h_delta1[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,1), main = "hypothetical stationary", ylab = "stationary state probabilities", xlab = "time of day")
 lines(todseq, h_delta1[,2], lwd = 2, col = color[2])
 lines(todseq, h_delta1[,3], lwd = 2, col = color[3])
 lines(todseq, h_delta1[,4], lwd = 2, col = color[4])
@@ -1910,7 +2367,7 @@ legend(8.5, 1, legend=c("State 1", "State 2", "State 3", "State 4"),
        col=color, lty = 1, cex=1, box.lwd = 0)
 
 # Plot for temperature
-plot(tempseq, h_delta2[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,1), main = "hypothetical stationary distribution", ylab = "stationary state probabilities", xlab = "temperature")
+plot(tempseq, h_delta2[,1], type = "l", lwd = 2, col = color[1], ylim = c(0,1), main = "hypothetical stationary", ylab = "stationary state probabilities", xlab = "temperature")
 lines(tempseq, h_delta2[,2], lwd = 2, col = color[2])
 lines(tempseq, h_delta2[,3], lwd = 2, col = color[3])
 lines(tempseq, h_delta2[,4], lwd = 2, col = color[4])
@@ -1962,11 +2419,98 @@ for (i in 1:16){
 
 ```
 
-## Multinomial regression for landform
+#### Temperature and Time of Day
 
-At the moment we did not yet fit the really large HMM with landform as a covariate. However we did fit a multinomial regression model to the decoded states. The results are shown below. State 2 is chosen as reference and the coefficients for Cliff are in the Intercept column.
+We also fitted a model using the categorical variable landform. These were the results:
 
 ```{r, echo = FALSE, message = FALSE}
+library(fastDummies)
+
+data4 = data2[1:5000,]
+data5 = dummy_cols(data4, select_columns = "landform.type", remove_first_dummy = TRUE)
+colnames(data5)[19:23] = c("lower_slope", "mountain_divide", "peak_ridge", "upper_slope", "valley")
+
+# t1 = Sys.time()
+# mod10 = nlm(f = mllk_landform, p = theta.star0.l, X = data5, N = 4, print.level = 2, iterlim = 2000, steptol = 1e-15)
+# Sys.time()-t1
+
+mod10 = readRDS("mod10.rds")
+
+theta.star = mod10$estimate
+states = viterbi_landform(mod10$estimate, data5, N = 4)
+
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+# Results -----------------------------------------------------------------
+
+color = c("deepskyblue", "orange", "springgreen4", "dodgerblue3")
+
+# Scatterplot
+
+data4 = data2[1:5000,]
+par(mfrow = c(3,1))
+par(mar = c(2,4,1.5,1))
+plot(data4$step[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Step lenght")
+legend(x = 4500, y = 30, legend=c("State 1", "State 2", "State 3", "State 4"),
+       col=color, lty = 1, cex=1)
+plot(data4$angle[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Turning angle")
+plot(data4$height.fd[1:5000], pch = 20, col = color[states[1:5000]], ylab = "Height (fd.)")
+
+```
+
+We can also have a look at the hypothetical stationary distribution and transition probabilities as functions of the landform:
+
+```{r, echo = FALSE, message = FALSE}
+# Hypothetical stationary
+
+stat = solve_gamma_landform(mod10$estimate, N = 4)
+
+library(graphics)
+par(mfrow = c(1,1))
+
+plot(stat$landform, rep(2,6), pch = 16, col = color[1], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "landform type")
+points(stat$landform, stat$delta[,1], type = "l", lty = "dashed", col = color[1], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "time of day")
+points(stat$landform, stat$delta[,1], pch = 16, col = color[1], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "time of day")
+points(stat$landform, stat$delta[,2], type = "l", lty = "dashed", col = color[2], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "time of day")
+points(stat$landform, stat$delta[,2], pch = 16, col = color[2], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "time of day")
+points(stat$landform, stat$delta[,3], type = "l", lty = "dashed", col = color[3], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "time of day")
+points(stat$landform, stat$delta[,3], pch = 16, col = color[3], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "time of day")
+points(stat$landform, stat$delta[,4], type = "l", lty = "dashed", col = color[4], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "time of day")
+points(stat$landform, stat$delta[,4], pch = 16, col = color[4], ylim = c(0,1), main = "Hypothetical stationary distribution", ylab = "Stationary state probabilities", xlab = "time of day")
+
+```
+
+
+(C = Cliff, LS = Lower/ Slope, MD = Mountain/ Divide, PR = Peak/ Ridge, US = Upper slope, V = Valley)
+
+```{r, echo = FALSE, message = FALSE}
+# Transition probabilities
+
+transprobs = get_transprobs_landform(mod10$estimate)
+
+par(mfrow = c(4,4))
+par(mar = c(4.5, 4.5, 1.5, 2))
+for (i in 1:16){
+  if(i %in% 1:4){st = 1}
+  if(i %in% 5:8){st = 2}
+  if(i %in% 9:12){st = 3}
+  if(i %in% 13:16){st = 4}
+  plot(transprobs$landform, rep(2,6), main = NULL, 
+       ylab = colnames(transprobs$transprobs)[i], xlab = "landform type", 
+       type = "l", lwd = 2, col = color[st], ylim = c(0,1))
+  points(transprobs$landform, transprobs$transprobs[,i], type = "l", lty = "dashed", col = color[st],)
+  points(transprobs$landform, transprobs$transprobs[,i], pch = 16, col = color[st],)
+}
+```
+
+
+## Multinomial regression for landform
+
+In addition to the large HMM with landform as covariate we fitted a multinomial regression model to the decoded states, which in theory is not acutally the right way to do as the data points are not independent, however the results are easier to interpret. They are shown below. State 2 is chosen as reference and the coefficients for Cliff are in the Intercept column.
+
+```{r, echo = FALSE, message = FALSE, warning = F}
 library(nnet)
 
 data4$states = states
@@ -1987,6 +2531,9 @@ These results lead to the following questions:
 
 * We had some observations way below sealevel. Are these just measurement errors?
 * In your first document you stated we might find flapping flight behaviour by using acceleration data. However we could not find a variable corresponding to this. What did you mean by acceleration data?
-* As shown above we currently have to resting behaviours. One with really low activity levels and a more active one. At least the data leads us this way. Does this make sense from a biological perspective?
+* As shown above we currently have two resting behaviours. One with really low activity levels and a more active one. At least the data leads us this way. Does this make sense from a biological perspective?
 * Currently we are only using the first 5000 measurement Intervals of ider (from approx. 40,000) as this part of the dataset already contains one trans-himalayan migration. This is due to the fact that the day variable has many errors from about interval 6000 onwards. Is this okay or would it be necessary to use the whole time series?
-* We already fit a model with temperature and time as covariates. We will also fit one with the categorical variable landform. Which variables are the most interesting from your perspective?
+* As shown above we fitted a model with temperature and time and one with landform. We actually also fitted a model with all variables but the results are really hard to show as the plots are quite complicated and messy. Which variables are the most interesting to you?
+* Do you want to have us fit models for all birds? This could be done joint or seperately, with joint meaning the paramters for the transition probability matrix being estimated the same over all birds. Is it reasonable to assume that the state switching dynamics (depending to the external variables) are the same for all birds?
+* Overall can you answer your research question with these results or do you need more? If not, could you state your research question more precisely?
+* In general: Do you like us doing more interpretation or do you just want the results quite raw to interpret them by yourself?
