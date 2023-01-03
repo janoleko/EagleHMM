@@ -1445,7 +1445,7 @@ get_transprobs_landform = function(theta.star){
 get_transprobs_ttl1 = function(theta.star, tod, tempmean){
   N = 4
   coef = matrix(theta.star[1:(9*(N-1)*N)], (N-1)*N, 9)
-  transprobs = matrix(data = NA, nrow = 6*length(temp), ncol = N^2)
+  transprobs = matrix(data = NA, nrow = 6*length(tod), ncol = N^2)
   
   for (i in 1:length(tod)){
     eta = coef[,1] + 
