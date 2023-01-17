@@ -58,8 +58,8 @@ We came up with 3 to 4 clearly distinguishable behaviours which the HMM could ma
 * individual likelihood computed for every day (as we only have data between sunset and sunrise)
   
 ## Todo
-*3 state und 4 state ohne covariablen für erste 5000 Beobachtungen ohne komischen Zeitraum
-*dann das bessere mit covariablen (temp, ToD, mTPI)?
+* 3 state und 4 state ohne covariablen für erste 5000 Beobachtungen ohne komischen Zeitraum
+* dann das bessere mit covariablen (temp, ToD, mTPI)?
 * dann das noch für beide Jahreszeiten also beide Richtungen der Migration
 
 
