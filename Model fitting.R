@@ -80,14 +80,65 @@ data2$step[which(data2$step == 0)] = runif(length(data2$step[which(data2$step ==
 
 
 
+# Data prep with accelaration data ----------------------------------------
+setwd("/Users/jan-ole/R/HMM Project")
+ider2 = read.csv("Ider_annotated_wind.csv")
 
+# ider2$height.fd = c(NA, diff(ider2$height.above.msl))
+# ider$turning2 = c(NA, diff(ider$heading*pi/180))
 
+N = nrow(ider2)/30
 
+measurement = rep(1:N, each=30)
 
+d2 = ider2[,5:6]
+d2$ID = "ID"
+colnames(d2) = c("x", "y", "ID")
+d2 = prepData(d2)
 
+index_stepNA <- (1:N)*30
+d2$step[index_stepNA] <- NA
 
+index_angleNA <- (1:(N-1))*30+1
+d2$angle[c(index_stepNA, index_angleNA)] <- NA
 
+data_w = as.data.frame(cbind(ider2,d2, measurement))
 
+data_w2 = data_w %>% 
+  dplyr::select(step, angle, height = height.above.msl, measurement, acc_x = acceleration.raw.x, acc_y = acceleration.raw.y, acc_z = acceleration.raw.z, 
+                x, y, day, landform, landform.type, elevation = elevation.m, temp = external.temperature, time = solar.time) %>% 
+  group_by(measurement) %>% 
+  summarise(count_steps = sum(!is.na(step)),
+            count_angles = sum(!is.na(angle)), # find intervals where there are barely any values
+            count_heights = sum(!is.na(height)),
+            step = mean(step, na.rm = T)*1000, # converting to m/s
+            angle = abs(mean(angle, na.rm = T))/pi,
+            height.fd = mean(diff(height), na.rm = T),
+            acc_x = mean(acc_x, na.rm = T),
+            acc_y = mean(acc_y, na.rm = T),
+            acc_z = mean(acc_z, na.rm = T),
+            height = mean(height, na.rm = T),
+            x = mean(x, na.rm = T),
+            y = mean(y, na.rm = T),
+            day = mean(day, na.rm = T),
+            landform = as.integer(names(which.max(table(landform)))),
+            landform.type = as.character(names(which.max(table(na.omit(landform.type))))),
+            elevation = mean(elevation, na.rm = T),
+            temp = mean(temp, na.rm = T),
+            time = mean(time, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(remove_step_height = (count_steps <= 3 | count_heights <= 3),
+         remove_angle = count_angles <= 3)
+
+View(ider2)
+
+par(mfrow = c(1,1))
+plot(data_w2$step[1:1000], type = "h")
+plot(data_w2$angle[1:1000], type = "h")
+plot(data_w2$height.fd[500:700], type = "h")
+plot(data_w2$acc_z[500:700], type = "h")
+
+hist(data_w2$acc_z, prob = T, breaks = 100)
 
 
 

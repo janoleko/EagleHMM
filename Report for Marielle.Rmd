@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-
 ```{r, echo = FALSE, message = FALSE}
 # defining all functions
 library(sn)

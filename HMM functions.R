@@ -491,7 +491,7 @@ mllk_tt = function(theta.star, X, N){
   l = numeric(numdays)
   # compute the daywise likelihoods seperately and sum up in the end
   for(i in 1:numdays){
-    index = which(X$day == i)
+    index = which(X$day == days[i])
     
     eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[1]]/24) + coef[,3]*cos(2*pi*X$time[index[1]]/24) + 
       coef[,4]*X$temp[index[1]]
