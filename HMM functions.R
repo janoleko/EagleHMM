@@ -1351,6 +1351,7 @@ viterbi_na_sn_cov = function(theta.star, X, N){
 
 
 viterbi_ttm = function(theta.star, X, N){
+  n = nrow(X)
   days = unique(X$day)
   numdays = length(days)
   coef = matrix(theta.star[1:(5*(N-1)*N)], (N-1)*N, 5)
