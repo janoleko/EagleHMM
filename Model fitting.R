@@ -38,7 +38,7 @@ data = as.data.frame(cbind(ider,d, measurement))
 
 # aggregation with mean
 data2 = data %>% 
-  dplyr::select(step, angle, height = height.above.msl, height.fd, measurement, x, y, day, landform, landform.type, elevation = elevation.m, temp = external.temperature, time = solar.time) %>% 
+  dplyr::select(step, angle, height = height.above.msl, height.fd, measurement, x, y, day, mTPI, landform, landform.type, elevation = elevation.m, temp = external.temperature, time = solar.time) %>% 
   group_by(measurement) %>% 
   summarise(count_steps = sum(!is.na(step)),
             count_angles = sum(!is.na(angle)), # find intervals where there are barely any values
@@ -50,6 +50,7 @@ data2 = data %>%
             x = mean(x, na.rm = T),
             y = mean(y, na.rm = T),
             day = mean(day, na.rm = T),
+            mTPI = mean(mTPI, na.rm = T),
             landform = as.integer(names(which.max(table(landform)))),
             landform.type = as.character(names(which.max(table(na.omit(landform.type))))),
             elevation = mean(elevation, na.rm = T),
