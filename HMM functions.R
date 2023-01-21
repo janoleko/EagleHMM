@@ -810,7 +810,7 @@ mllk_ttm = function(theta.star, X, N){
     phi = foo/sum(foo)
     
     for (t in 2:length(index)){
-      eta = coef[,1] + coef[,2]*X$temp[index[1]] + coef[,3]*sin(2*pi*X$time[index[1]]/24) + coef[,4]*cos(2*pi*X$time[index[1]]/24) + coef[,5]*X$mTPI[index[1]]
+      eta = coef[,1] + coef[,2]*X$temp[index[t]] + coef[,3]*sin(2*pi*X$time[index[t]]/24) + coef[,4]*cos(2*pi*X$time[index[t]]/24) + coef[,5]*X$mTPI[index[t]]
       
       Gamma = diag(N)
       Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
