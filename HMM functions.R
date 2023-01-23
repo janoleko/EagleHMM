@@ -1711,6 +1711,48 @@ get_transprobs_ttl1 = function(theta.star, tod, tempmean){
 
 
 
+get_transprobs_ttm = function(theta.star, variable = "temp", X, N = 4, tempmean = mean(X$temp, na.rm = T),
+                              todmean = 12, mTPImean = mean(X$mTPI, na.rm = T)){
+
+  sequence = seq(min(X[variable], na.rm = T), max(X[variable], na.rm = T), length.out = 100)
+  
+  coef = matrix(theta.star[1:(5*(N-1)*N)], (N-1)*N, 5)
+  transprobs = matrix(data = NA, nrow = length(sequence), ncol = N^2)
+  
+  for (i in 1:length(sequence)){
+    if(variable == "temp"){
+      eta = coef[,1] + coef[,2]*sequence[i] + coef[,3]*sin(2*pi*todmean/24) + coef[,4]*cos(2*pi*todmean/24) + coef[,5]*mTPImean
+    }
+    if(variable == "time"){
+      eta = coef[,1] + coef[,2]*tempmean + coef[,3]*sin(2*pi*sequence[i]/24) + coef[,4]*cos(2*pi*sequence[i]/24) + coef[,5]*mTPImean
+    }
+    if(variable == "mTPI"){
+      eta = coef[,1] + coef[,2]*tempmean + coef[,3]*sin(2*pi*todmean/24) + coef[,4]*cos(2*pi*todmean/24) + coef[,5]*sequence[i]
+    }
+    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta)
+    Gamma = Gamma/rowSums(Gamma)
+    
+    for (j in 1:N){
+      transprobs[i,(j-1)*N+1:N] = Gamma[,j]
+    }
+  }
+  
+  names = rep(1,N)
+  for (j in 2:N){
+    names = c(names, rep(j,N))
+  }
+  colnames(transprobs) = names
+  
+  return(transprobs)
+}
+
+
+
+
+
+
 viterbi_na_sn = function(theta.star, X, N){
   n = nrow(X)
   
