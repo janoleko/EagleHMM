@@ -27,12 +27,17 @@ data4 = data2[1:5000,]
 data4 = data4[-which(data4$day >= 41 & data4$day <= 48),]
 
 mod1 = nlm(mllk, theta.star0, X = data4, N = 3, print.level = 2, hessian = T, iterlim = 1000)
+
+mod1 = readRDS("mod_no_cov_3st.rds")
+
 theta.star = mod1$estimate
 sds = sqrt(diag(solve(mod1$hessian)))
 N = 3
 
 # setwd("/Users/jan-ole/R/EagleHMM")
 # saveRDS(mod1, "mod_no_cov_3st.rds")
+
+
 
 plotrix::plotCI(x = 1:length(theta.star), y = theta.star, ui=theta.star+1.96*sds, li=theta.star-1.96*sds, 
        pch = 20, bty = "n", xlab = "index of theta*", ylab = "theta*")
@@ -84,9 +89,9 @@ states = viterbi(theta.star, data4, N = 3)
 # Decoded states
 
 par(mfrow = c(3,1))
-plot(data4$step, type = "h", bty = "n", col = color[states], ylab = "step length")
-plot(data4$angle, type = "h", bty = "n", col = color[states], ylab = "turning angle")
-plot(data4$height.fd, type = "h", bty = "n", col = color[states], ylab = "height difference")
+plot(data4$step, pch = 20, bty = "n", col = color[states], ylab = "step length")
+plot(data4$angle, pch = 20, bty = "n", col = color[states], ylab = "turning angle")
+plot(data4$height.fd, pch = 20, bty = "n", col = color[states], ylab = "height difference")
 
 
 
@@ -108,6 +113,8 @@ theta.star0.4 = c(log(theta0.4[1:28]),
                    theta0.4[37:40])
 
 mod = nlm(mllk, theta.star0.4, X = data4, N = 4, print.level = 2, hessian = T, iterlim = 1000)
+mod = readRDS("mod_no_cov_4st.rds")
+
 theta.star = mod$estimate
 sds = sqrt(diag(solve(mod$hessian)))
 
@@ -134,6 +141,7 @@ al = theta.star[(N-1)*N+6*N+1:N]
 # Plotting results
 color = c("deepskyblue", "orange", "springgreen3", "dodgerblue3")
 
+par(mfrow = c(1,1))
 hist(data4$step, prob = T, breaks = 50)
 curve(delta[1]*dgamma(x, shape = mu.g[1]^2/sigma.g[1]^2, scale = sigma.g[1]^2/mu.g[1]), add = T, lwd = 2, col = color[1], n = 500)
 curve(delta[2]*dgamma(x, shape = mu.g[2]^2/sigma.g[2]^2, scale = sigma.g[2]^2/mu.g[2]), add = T, lwd = 2, col = color[2], n = 500)
@@ -170,9 +178,9 @@ states = viterbi(theta.star, data4, N = 4)
 # Plotting the decoded states ---------------------------------------------
 
 par(mfrow = c(3,1))
-plot(data4$step, type = "h", bty = "n", col = color[states], ylab = "step length")
-plot(data4$angle, type = "h", bty = "n", col = color[states], ylab = "turning angle")
-plot(data4$height.fd, type = "h", bty = "n", col = color[states], ylab = "height difference")
+plot(data4$step, pch = 20, bty = "n", col = color[states], ylab = "step length")
+plot(data4$angle, pch = 20, bty = "n", col = color[states], ylab = "turning angle")
+plot(data4$height.fd, pch = 20, bty = "n", col = color[states], ylab = "height difference")
 
 
        
