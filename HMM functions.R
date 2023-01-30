@@ -794,10 +794,10 @@ mllk_ttm = function(theta.star, X, N){
     allprobs[ind1,j] =
       dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
       dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])*
-      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j])
+      sn::dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j])
     allprobs[ind2,j] =
       dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
-      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j])
+      sn::dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j])
   }
   
   # forward algorithm to compute the log-likelihood
@@ -1561,6 +1561,22 @@ solve_gamma_ttl2 = function(theta.star, temp, todmean, N){
   return(delta)
 }
 
+solve_gamma_mTPI = function(theta.star, mTPI, tempmean, todmean, N){
+  coef = matrix(theta.star[1:(5*(N-1)*N)], (N-1)*N, 5)
+  delta = matrix(data = NA, nrow = length(mTPI), ncol = N)
+  
+  for (i in 1:length(mTPI)){
+    eta = coef[,1] + coef[,2]*tempmean + coef[,3]*sin(2*pi*todmean/24) + coef[,4]*cos(2*pi*todmean/24) + coef[,5]*mTPI[i]
+    
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta)
+    Gamma = Gamma/rowSums(Gamma)
+    
+    delta[i,] = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-30)
+  }
+  return(delta)
+}
+
 
 get_transprobs = function(theta.star, temp){
   N = 4
@@ -1735,7 +1751,7 @@ get_transprobs_ttm = function(theta.star, variable = "temp", X, N = 4, tempmean 
     Gamma = Gamma/rowSums(Gamma)
     
     for (j in 1:N){
-      transprobs[i,(j-1)*N+1:N] = Gamma[,j]
+      transprobs[i,(j-1)*N+1:N] = Gamma[j,]
     }
   }
   
@@ -1900,50 +1916,4 @@ get_probs = function(theta.star, X, N){
   }
   
   return(probs) 
-}
-
-
-viterbi = function(theta.star, X, N){ 
-  n = nrow(X)
-  
-  Gamma = diag(N)
-  Gamma[!Gamma] = exp(theta.star[1:((N-1)*N)])
-  Gamma = Gamma/rowSums(Gamma)
-  delta = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-20) # stationary, smaller tolerance to avoid numerical problems
-  
-  # gamma distribution: Step length
-  mu.g = exp(theta.star[(N-1)*N+1:N]) # means of gamma distributions
-  sigma.g = exp(theta.star[(N-1)*N+N+1:N]) # sds of gamma distributions
-  
-  # beta distribution: Turning angle/ pi
-  alpha = exp(theta.star[(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
-  beta = exp(theta.star[(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
-  p.b = plogis(theta.star[(N-1)*N+4*N+1:N])
-  
-  # normal distribution: Height first difference
-  mu = theta.star[(N-1)*N+5*N+1:N] # means of normal distributions
-  sigma = exp(theta.star[(N-1)*N+6*N+1:N]) # sds of normal distributions
-  
-  allprobs = matrix(1, n, N)
-  ind = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd)) # Fragen wie wir das machen --> sonst immer gar keine Information nur weil in angle Zeitreihe so viele NAs
-  
-  for (j in 1:N){ # allprobs matrix
-    allprobs[ind,j] =
-      dgamma(X$step[ind], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
-      zbeta(X$angle[ind], shape1 = alpha[j], shape2 = beta[j], p = p.b[j])* # beta
-      dnorm(X$height.fd[ind], mean = mu[j], sd = sigma[j]) # normal
-  }
-  
-  xi = matrix(0, n, ncol = N) 
-  foo = delta * allprobs[1, ]
-  xi[1, ] = foo / sum(foo)
-  for (t in 2:n){
-    foo = apply(xi[t - 1, ] * Gamma, 2, max) * allprobs[t, ]
-    xi[t, ] = foo / sum(foo) 
-    }
-  iv <- numeric(n)
-  iv[n] <- which.max(xi[n, ]) 
-  for (t in (n - 1):1){
-    iv[t] <- which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
-  return(iv)
 }
