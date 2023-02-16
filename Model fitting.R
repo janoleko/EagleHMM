@@ -75,7 +75,24 @@ data2$angle[which(data2$angle == 0)] = runif(length(data2$angle[which(data2$angl
 data2$step[which(data2$step == 0)] = runif(length(data2$step[which(data2$step == 0)]), 0, 0.02)
 
 
-# Data prep done ----------------------------------------------------------
+
+# Plots -------------------------------------------------------------------
+dev.off()
+par(mfrow = c(3,1), mar = c(4.5,4,3,2))
+plot(data2$step, pch = 20, ylab = "step length", xlim = c(0,15000), col = "grey48", bty = "n")
+plot(data2$angle, pch = 20, ylab = "angle", xlim = c(0,15000), col = "grey48", bty = "n")
+plot(data2$height.fd, pch = 20, ylab = "height difference", xlim = c(0,15000), ylim = c(-15,15), col = "grey48", bty = "n")
+
+
+par(mfrow = c(1,3))
+hist(data2$step, prob = T, breaks = 100, xlab = "step length", main = "Histogram of step length")
+hist(data2$angle, prob = T, breaks = 70, xlab = "turning angle", main = "Histogram of turning angle")
+hist(data2$height.fd, prob = T, breaks = 150, xlab = "height difference", main = "Histogram of height difference", xlim = c(-6,6))
+
+
+
+
+
 
 
 
