@@ -42,10 +42,10 @@ mllk = function(theta.star, X, N){
     allprobs[ind1,j] =
       dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
       dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])* # beta
-      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+      sn::dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
     allprobs[ind2,j] =
       dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
-      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+      sn::dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
   }
   
   l = numeric(numdays)
@@ -490,57 +490,47 @@ mllk_na_sn = function(theta.star, X, N){
 mllk_tod = function(theta.star, X, N){
   days = unique(X$day)
   numdays = length(days)
-  
   coef = matrix(theta.star[1:(3*(N-1)*N)], (N-1)*N, 3)
   
-  # gamma distribution: Step length
   mu.g = exp(theta.star[3*(N-1)*N+1:N]) # means of gamma distributions
   sigma.g = exp(theta.star[3*(N-1)*N+N+1:N]) # sds of gamma distributions
   
-  # beta distribution: Turning angle/ pi
   alpha = exp(theta.star[3*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
   beta = exp(theta.star[3*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
   
-  # normal distribution: Height first difference
-  xi = theta.star[3*(N-1)*N+4*N+1:N] # means of normal distributions
-  omega = exp(theta.star[3*(N-1)*N+5*N+1:N]) # sds of normal distributions
+  xi = theta.star[3*(N-1)*N+4*N+1:N]
+  omega = exp(theta.star[3*(N-1)*N+5*N+1:N])
   al = theta.star[3*(N-1)*N+6*N+1:N]
   
+  delta = c(1, exp(theta.star[3*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  
   allprobs = matrix(1, nrow(X), N)
-  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd)) # Fragen wie wir das machen --> sonst immer gar keine Information nur weil in angle Zeitreihe so viele NAs
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd))
   ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
   
   for (j in 1:N){ # allprobs matrix
     allprobs[ind1,j] =
-      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
-      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])* # beta
-      dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
-    
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])*
+      sn::dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j])
     allprobs[ind2,j] =
-      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])* #gamma
-      dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j]) # skew normal
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      sn::dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j])
   }
   
   # forward algorithm to compute the log-likelihood
   l = numeric(numdays)
-  # compute the daywise likelihoods seperately and sum up in the end
-  for(i in 1:numdays){
-    index = which(X$day == i)
+  for(i in 1:numdays){ # days independent
+    index = which(X$day == days[i])
     
-    eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[1]]/24) + coef[,3]*cos(2*pi*X$time[index[1]]/24)
-      
-    Gamma = diag(N)
-    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
-    Gamma = Gamma/rowSums(Gamma)
-    delta = solve(t(diag(N)-Gamma+1),rep(1,N), tol = 1e-18)
-    
-    # vllt statt delta die hypothetische stationary zu Tagesbeginn oder gleichverteilt
     foo = delta%*%diag(allprobs[index[1],])
     l[i] = log(sum(foo))
     phi = foo/sum(foo)
     
     for (t in 2:length(index)){
       eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[t]]/24) + coef[,3]*cos(2*pi*X$time[index[t]]/24)
+      
       Gamma = diag(N)
       Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
       Gamma = Gamma/rowSums(Gamma)
