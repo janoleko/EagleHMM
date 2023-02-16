@@ -235,6 +235,10 @@ curve(dnorm(x, 0, .05), add = T, col = color[3], lwd = 2)
 par(mfrow = c(2,1))
 plot(ider$location.long[451:480], ider$location.lat[451:480], pch = 20)
 plot(ider$height.above.msl[451:480], pch = 20)
+
+simply_scatter(ider$location.long[451:480], ider$location.lat[451:480], ider$height.above.msl[451:480],
+               xlab = "longitude", ylab = "latitude", zlab = "height above msl.")
+
 plot(ider$location.long[481:510], ider$location.lat[481:510], pch = 20)
 plot(ider$location.long[511:540], ider$location.lat[511:540], pch = 20)
 plot(ider$location.long[541:570], ider$location.lat[541:570], pch = 20)
@@ -458,7 +462,7 @@ plot(ider$location.long[600901:600930], ider$location.lat[600901:600930], pch = 
 plot(ider$height.above.msl[600901:600930], pch = 20) #1 soaring
 
 simply_scatter(ider$location.long[600901:600930], ider$location.lat[600901:600930], 
-               ider$height.above.msl[600901:600930], colorvar = c(1, rep(0,29)))
+               ider$height.above.msl[600901:600930])
 
 plot(ider$location.long[600931:600960], ider$location.lat[600931:600960], pch = 20)
 plot(ider$height.above.msl[600931:600960], pch = 20) # flapping?
@@ -530,7 +534,7 @@ plot(ider$location.long[601591:601620], ider$location.lat[601591:601620], pch = 
 plot(ider$height.above.msl[601591:601620], pch = 20) # flapping flight
 
 simply_scatter(ider$location.long[601591:601620], ider$location.lat[601591:601620], 
-               ider$height.above.msl[601591:601620], colorvar = c(1, rep(0,29)))
+               ider$height.above.msl[601591:601620])
 
 plot(ider$location.long[601621:601650], ider$location.lat[601621:601650], pch = 20)
 plot(ider$height.above.msl[601621:601650], pch = 20) #3
@@ -769,7 +773,7 @@ plot(ider$location.long[75151:75180], ider$location.lat[75151:75180], pch = 20)
 plot(ider$height.above.msl[75151:75180], pch = 20) # what is this?
 data$step[75151:75180]*1000
 simply_scatter(ider$location.long[75151:75180], ider$location.lat[75151:75180], 
-               ider$height.above.msl[75151:75180], colorvar = c(1, rep(2,29)))
+               ider$height.above.msl[75151:75180])
 
 plot(ider$location.long[75181:75210], ider$location.lat[75181:75210], pch = 20)
 plot(ider$height.above.msl[75181:75210], pch = 20) # flying?
