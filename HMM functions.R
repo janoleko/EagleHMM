@@ -1771,19 +1771,19 @@ pseudo_res_tm = function(theta.star, X, N){
   ts = (1:nrow(X))[which(!is.na(X$step))]
   n1 = rep(NA, nrow(X))
   for (t in ts){
-    u = integrate(cond_dens, lower = 0, upper = X$step[t], alphas = alpha_matrix[t,])
+    u = integrate(cond_dens, lower = 0, upper = X$step[t], alphas = alpha_matrix[t,], rel.tol = 0.00001)
     n1[t] = qnorm(u$value)
   }
   ts = (1:nrow(X))[which(!is.na(X$angle))]
   n2 = rep(NA, nrow(X))
   for (t in ts){
-    u = integrate(cond_dens2, lower = 0, upper = X$angle[t], alphas = alpha_matrix[t,])
+    u = integrate(cond_dens2, lower = 0, upper = X$angle[t], alphas = alpha_matrix[t,], rel.tol = 0.00001)
     n2[t] = qnorm(u$value)
   }
   ts = (1:nrow(X))[which(!is.na(X$height.fd))]
   n3 = rep(NA, nrow(X))
   for (t in ts){
-    u = integrate(cond_dens3, lower = -40, upper = X$height.fd[t], alphas = alpha_matrix[t,])
+    u = integrate(cond_dens3, lower = -40, upper = X$height.fd[t], alphas = alpha_matrix[t,], rel.tol = 0.00001)
     n3[t] = qnorm(u$value)
   }
   
