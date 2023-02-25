@@ -508,3 +508,42 @@ t1 = Sys.time()
 mod_mTPI_bothways = optimParallel(par = theta.star0.temp, fn = mllk_mTPI, X = data7, N = 4, hessian = T, control = list(trace = 5, maxit = 10000))
 Sys.time()-t1
 stopCluster(cl)
+
+theta.star = mod_mTPI_bothways$par
+
+(AIC = 2*mod_mTPI_bothways$value + 2*length(theta.star))
+(BIC = 2*mod_mTPI_bothways$value + log(nrow(data7))*length(theta.star))
+
+
+
+# Model temperature and mTPI ----------------------------------------------
+
+
+theta0.tempm = c(Gamma[-1,1], Gamma[-2,2], Gamma[-3,3], Gamma[-4,4], rep(0,24),
+              1, 8, 15, 2, # mu.gamma
+              1, 4, 10, 2, # sigma.gamma
+              0.7, 10, 1, 3, # alphas
+              2, 55, 40, 40, # betas
+              0, 0.2, -0.2, 0.4, # xi
+              0.05, 0.5, 0.5, 0.5, # omega
+              0, 5, -5, 5, # al
+         3     -2, -2, -2) # delta
+
+theta.star0.tempm = c(theta0.tempm[1:36],
+                   log(theta0.tempm[37:52]),
+                   theta0.tempm[53:56],
+                   log(theta0.tempm[57:60]),
+                   theta0.tempm[61:67])
+
+cl = makeCluster(8); setDefaultCluster(cl=cl)
+t1 = Sys.time()
+mod_temp_mTPI_bothways = optimParallel(par = theta.star0.tempm, fn = mllk_temp_mTPI, X = data7, N = 4, hessian = T, control = list(trace = 5, maxit = 10000))
+Sys.time()-t1
+stopCluster(cl)
+
+theta.star = mod_temp_mTPI_bothways$par
+
+(AIC = 2*mod_temp_mTPI_bothways$value + 2*length(theta.star))
+(BIC = 2*mod_temp_mTPI_bothways$value + log(nrow(data7))*length(theta.star))
+
+# testen mit 4 Kernen 
