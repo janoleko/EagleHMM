@@ -281,30 +281,32 @@ theta.star0.4 = c(theta0.4[1:60], log(theta0.4[61:76]), theta0.4[77:80], log(the
 # theta.star0.4 = mod_ttm4$estimate
 
 # Parallelization
-library(optimParallel)
-cl = makeCluster(8)
-setDefaultCluster(cl=cl)
-
-t1 = Sys.time()
-mod_bothways = optimParallel(par = mod_ttm4$estimate, fn = mllk_ttm, X = data7, N = 4, hessian = T, control = list(trace = 5, maxit = 10000))
-Sys.time()-t1
-theta.star = mod_bothways$par
+# library(optimParallel)
+# cl = makeCluster(8)
+# setDefaultCluster(cl=cl)
+# 
+# t1 = Sys.time()
+# mod_bothways = optimParallel(par = mod_ttm4$estimate, fn = mllk_ttm, X = data7, N = 4, hessian = T, control = list(trace = 5, maxit = 10000))
+# Sys.time()-t1
+# theta.star = mod_bothways$par
 
 
 # saveRDS(mod_bothways, "mod_bothways.rds")
 mod_bothways = readRDS("mod_bothways.rds")
 theta.star = mod_bothways$par
 
-t1 = Sys.time()
-mod_ttm4_return = nlm(mllk_ttm, theta.star0.4, X = data6[1:1000,], N = 4, print.level = 2, hessian = T, iterlim = 10000)
-Sys.time()-t1
-theta.star = mod_ttm4_return$estimate
+# t1 = Sys.time()
+# mod_ttm4_return = nlm(mllk_ttm, theta.star0.4, X = data6[1:1000,], N = 4, print.level = 2, hessian = T, iterlim = 10000)
+# Sys.time()-t1
+# theta.star = mod_ttm4_return$estimate
 
-sds = sqrt(diag(solve(mod_ttm4_return$hessian+diag(rep(1e-8, length(theta.star))))))
+# sds = sqrt(diag(solve(mod_ttm4_return$hessian+diag(rep(1e-8, length(theta.star))))))
+# 
+# AIC = 2*mod_parallel$value + 2*length(theta.star)
+# BIC = 2*mod_parallel$value + log(nrow(data7))*length(theta.star)
 
-AIC = 2*mod_parallel$value + 2*length(theta.star)
-BIC = 2*mod_parallel$value + log(nrow(data7))*length(theta.star)
-
+(AIC = 2*mod_bothways$value + 2*length(theta.star))
+(BIC = 2*mod_bothways$value + log(nrow(data7))*length(theta.star))
 
 # State decoding
 states = viterbi_ttm(theta.star, X = data7, N = 4)
