@@ -478,13 +478,19 @@ par(mfrow = c(1,3))
 ## histograms
 # step length
 hist(residuals$step, prob = T, xlim = c(-4,4), main = "step length", xlab = "step length", ylim = c(0, 0.5))
-curve(dnorm(x, mean(residuals$step, na.rm = T), sd(residuals$step, na.rm = T)), add = T, lwd = 2)
+lines(density(na.omit(residuals$step), bw = 0.3), lwd = 2, col = "orange")
+curve(dnorm(x, mean(residuals$step, na.rm = T), sd(residuals$step, na.rm = T)), add = T, lwd = 2, lty = "dashed", n = 500)
 # turning angle
 hist(residuals$angle, prob = T, xlim = c(-4,4), breaks = 40, main = "turning angle", xlab = "turning angle", ylim = c(0, 0.6))
-curve(dnorm(x, mean(residuals$angle, na.rm = T), sd(residuals$angle, na.rm = T)), add = T, lwd = 2)
+lines(density(na.omit(residuals$angle), bw = 0.55), lwd = 2, col = "orange")
+curve(dnorm(x, mean(residuals$angle, na.rm = T), sd(residuals$angle, na.rm = T)), add = T, lwd = 2, lty = "dashed", n = 500)
 # turning height.fd
 hist(residuals$height.fd, prob = T, xlim = c(-5,5), breaks = 30, main = "height difference", xlab = "height difference", ylim = c(0, 0.5))
-curve(dnorm(x, mean(residuals$height.fd, na.rm = T), sd(residuals$height.fd, na.rm = T)), add = T, lwd = 2)
+lines(density(na.omit(residuals$height.fd), bw = 0.3), lwd = 2, col = "orange")
+curve(dnorm(x, mean(residuals$height.fd, na.rm = T), sd(residuals$height.fd, na.rm = T)), add = T, lwd = 2, lty = "dashed", n = 500)
+legend("topright",
+       col = c("orange", "black"), lty = c("solid", "dashed"), lwd = 2, pch = c(NA, NA),
+       legend = c("KDE", "normal \ndistribution"), box.col = "white")
 
 ## QQ-Plots
 qqnorm(residuals$step, main = "step length", bty = "n")
