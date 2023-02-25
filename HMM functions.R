@@ -545,6 +545,117 @@ mllk_tod = function(theta.star, X, N){
 }
 
 
+mllk_temp = function(theta.star, X, N){
+  days = unique(X$day)
+  numdays = length(days)
+  coef = matrix(theta.star[1:(2*(N-1)*N)], (N-1)*N, 2)
+  
+  mu.g = exp(theta.star[2*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[2*(N-1)*N+N+1:N]) # sds of gamma distributions
+  
+  alpha = exp(theta.star[2*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[2*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  
+  xi = theta.star[2*(N-1)*N+4*N+1:N]
+  omega = exp(theta.star[2*(N-1)*N+5*N+1:N])
+  al = theta.star[2*(N-1)*N+6*N+1:N]
+  
+  delta = c(1, exp(theta.star[2*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd))
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])*
+      sn::dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j])
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      sn::dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j])
+  }
+  
+  # forward algorithm to compute the log-likelihood
+  l = numeric(numdays)
+  for(i in 1:numdays){ # days independent
+    index = which(X$day == days[i])
+    
+    foo = delta%*%diag(allprobs[index[1],])
+    l[i] = log(sum(foo))
+    phi = foo/sum(foo)
+    
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*X$temp[index[t]]
+      
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      foo = phi%*%Gamma%*%diag(allprobs[index[t],])
+      l[i] = l[i]+log(sum(foo))
+      phi = foo/sum(foo)
+    }
+  }
+  l = sum(l)
+  return(-l) 
+}
+
+
+
+mllk_mTPI = function(theta.star, X, N){
+  days = unique(X$day)
+  numdays = length(days)
+  coef = matrix(theta.star[1:(2*(N-1)*N)], (N-1)*N, 2)
+  mu.g = exp(theta.star[2*(N-1)*N+1:N])
+  sigma.g = exp(theta.star[2*(N-1)*N+N+1:N])
+  alpha = exp(theta.star[2*(N-1)*N+2*N+1:N])
+  beta = exp(theta.star[2*(N-1)*N+3*N+1:N])
+  xi = theta.star[2*(N-1)*N+4*N+1:N]
+  omega = exp(theta.star[2*(N-1)*N+5*N+1:N])
+  al = theta.star[2*(N-1)*N+6*N+1:N]
+  delta = c(1, exp(theta.star[2*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd))
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])*
+      sn::dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j])
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      sn::dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j])
+  }
+  
+  l = numeric(numdays)
+  for(i in 1:numdays){
+    index = which(X$day == days[i])
+    
+    foo = delta%*%diag(allprobs[index[1],])
+    l[i] = log(sum(foo))
+    phi = foo/sum(foo)
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*X$mTPI[index[t]]
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta)
+      Gamma = Gamma/rowSums(Gamma)
+      foo = phi%*%Gamma%*%diag(allprobs[index[t],])
+      l[i] = l[i]+log(sum(foo))
+      phi = foo/sum(foo)
+    }
+  }
+  l = sum(l)
+  return(-l) 
+}
+
+
+
+
+
 # Likelihood Funktion with:
 # - NA handling for turning angle
 # - Skew normal distribution for height.fd
@@ -595,6 +706,59 @@ mllk_tt = function(theta.star, X, N){
     for (t in 2:length(index)){
       eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[t]]/24) + coef[,3]*cos(2*pi*X$time[index[t]]/24) + coef[,4]*X$temp[index[t]]
       
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      
+      foo = phi%*%Gamma%*%diag(allprobs[index[t],])
+      l[i] = l[i]+log(sum(foo))
+      phi = foo/sum(foo)
+    }
+  }
+  l = sum(l)
+  return(-l) 
+}
+
+
+
+
+mllk_tm = function(theta.star, X, N){
+  days = unique(X$day)
+  numdays = length(days)
+  coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
+  mu.g = exp(theta.star[4*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[4*(N-1)*N+N+1:N]) # sds of gamma distributions
+  alpha = exp(theta.star[4*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[4*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  xi = theta.star[4*(N-1)*N+4*N+1:N]
+  omega = exp(theta.star[4*(N-1)*N+5*N+1:N])
+  al = theta.star[4*(N-1)*N+6*N+1:N]
+  delta = c(1, exp(theta.star[4*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd))
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])*
+      sn::dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j])
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      sn::dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j])
+  }
+  
+  # forward algorithm to compute the log-likelihood
+  l = numeric(numdays)
+  for(i in 1:numdays){ # days independent
+    index = which(X$day == days[i])
+    foo = delta%*%diag(allprobs[index[1],])
+    l[i] = log(sum(foo))
+    phi = foo/sum(foo)
+    
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[t]]/24) + coef[,3]*cos(2*pi*X$time[index[t]]/24) + coef[,4]*X$mTPI[index[t]]
       Gamma = diag(N)
       Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
       Gamma = Gamma/rowSums(Gamma)
@@ -1012,6 +1176,64 @@ viterbi_tt = function(theta.star, X, N){
 }
 
 
+viterbi_temp = function(theta.star, X, N){
+  n = nrow(X)
+  days = unique(X$day)
+  numdays = length(days)
+  coef = matrix(theta.star[1:(2*(N-1)*N)], (N-1)*N, 2)
+  mu.g = exp(theta.star[2*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[2*(N-1)*N+N+1:N]) # sds of gamma distributions
+  alpha = exp(theta.star[2*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[2*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  xi = theta.star[2*(N-1)*N+4*N+1:N]
+  omega = exp(theta.star[2*(N-1)*N+5*N+1:N])
+  al = theta.star[2*(N-1)*N+6*N+1:N]
+  delta = c(1, exp(theta.star[2*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd))
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])*
+      sn::dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j])
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      sn::dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j])
+  }
+  
+  xi = matrix(0, n, ncol = N)
+  for(i in 1:numdays){
+    index = which(X$day == days[i])
+
+    foo = delta * allprobs[index[1], ]
+    xi[index[1], ] = foo / sum(foo)
+    
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*X$temp[index[t]]
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta)
+      Gamma = Gamma/rowSums(Gamma)
+      
+      foo = apply(xi[index[t - 1], ] * Gamma, 2, max) * allprobs[index[t], ]
+      xi[index[t], ] = foo / sum(foo) 
+    }
+  }
+  iv <- numeric(n)
+  iv[n] <- which.max(xi[n, ]) 
+  for (t in (n - 1):1){
+    eta = coef[,1] + coef[,2]*X$temp[t]
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+    Gamma = Gamma/rowSums(Gamma)
+    
+    iv[t] = which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
+  return(iv)
+}
+
+
+
 viterbi_landform = function(theta.star, X, N){
   n = nrow(X)
   days = unique(X$day)
@@ -1369,6 +1591,158 @@ viterbi_ttm = function(theta.star, X, N){
     iv[t] = which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
   return(iv) 
 }
+
+
+viterbi_tm = function(theta.star, X, N){
+  n = nrow(X)
+  days = unique(X$day)
+  numdays = length(days)
+  coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
+  mu.g = exp(theta.star[4*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[4*(N-1)*N+N+1:N]) # sds of gamma distributions
+  alpha = exp(theta.star[4*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[4*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  xi = theta.star[4*(N-1)*N+4*N+1:N]
+  omega = exp(theta.star[4*(N-1)*N+5*N+1:N])
+  al = theta.star[4*(N-1)*N+6*N+1:N]
+  delta = c(1, exp(theta.star[4*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd))
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])*
+      sn::dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j])
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      sn::dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j])
+  }
+  xi = matrix(0, n, ncol = N)
+  
+  for(i in 1:numdays){
+    index = which(X$day == days[i])
+    
+    foo = delta * allprobs[index[1], ]
+    xi[index[1], ] = foo / sum(foo)
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[t]]/24) + coef[,3]*cos(2*pi*X$time[index[t]]/24) + coef[,4]*X$mTPI[index[t]]
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta)
+      Gamma = Gamma/rowSums(Gamma)
+      foo = apply(xi[index[t - 1], ] * Gamma, 2, max) * allprobs[index[t], ]
+      xi[index[t], ] = foo / sum(foo) 
+    }
+  }
+  iv <- numeric(n)
+  iv[n] <- which.max(xi[n, ]) 
+  for (t in (n - 1):1){
+    eta = coef[,1] + coef[,2]*sin(2*pi*X$time[t]/24) + coef[,3]*cos(2*pi*X$time[t]/24) + coef[,4]*X$mTPI[t]
+    Gamma = diag(N)
+    Gamma[!Gamma] = exp(eta)
+    Gamma = Gamma/rowSums(Gamma)
+    iv[t] = which.max(Gamma[, iv[t + 1]] * xi[t, ]) }
+  return(iv) 
+   
+}
+
+
+
+
+pseudo_res_tm = function(theta.star, X, N){
+  days = unique(X$day)
+  numdays = length(days)
+  coef = matrix(theta.star[1:(4*(N-1)*N)], (N-1)*N, 4)
+  mu.g = exp(theta.star[4*(N-1)*N+1:N]) # means of gamma distributions
+  sigma.g = exp(theta.star[4*(N-1)*N+N+1:N]) # sds of gamma distributions
+  alpha = exp(theta.star[4*(N-1)*N+2*N+1:N]) # shape1 parameters of beta distributions
+  beta = exp(theta.star[4*(N-1)*N+3*N+1:N]) # shape2 parameters of beta distributions
+  xi = theta.star[4*(N-1)*N+4*N+1:N]
+  omega = exp(theta.star[4*(N-1)*N+5*N+1:N])
+  al = theta.star[4*(N-1)*N+6*N+1:N]
+  delta = c(1, exp(theta.star[4*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd))
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])*
+      sn::dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j])
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      sn::dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j])
+  }
+  alpha_matrix = matrix(data = NA, nrow = nrow(X), ncol = N)
+  for(i in 1:numdays){ # days independent
+    index = which(X$day == days[i])
+    foo = delta%*%diag(allprobs[index[1],])
+    phi = foo/sum(foo)
+    alpha_matrix[index[1],] = phi/sum(phi)
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*sin(2*pi*X$time[index[t]]/24) + coef[,3]*cos(2*pi*X$time[index[t]]/24) + coef[,4]*X$mTPI[index[t]]
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta) # dynamically changing Gamma-Matrix
+      Gamma = Gamma/rowSums(Gamma)
+      foo = phi%*%Gamma%*%diag(allprobs[index[t],])
+      phi = foo/sum(foo)
+      alpha_matrix[index[t],] = phi/sum(phi)
+    }
+  }
+  
+  ## calculating pseudo residuals
+  # implementing mixture of component distributions for each dimension
+  # steplength
+  cond_dens = function(x, alphas){
+    out = numeric(length(x))
+    for (i in 1:length(x)){
+      out[i] = sum(alphas*dgamma(x[i], shape = mu.g^2/sigma.g^2, scale = sigma.g^2/mu.g))
+    }
+    return(out)
+  }
+  # turning angle
+  cond_dens2 = function(x, alphas){
+    out = numeric(length(x))
+    for (i in 1:length(x)){
+      out[i] = sum(alphas*dbeta(x[i], shape1 = alpha, shape2 = beta))
+    }
+    return(out)
+  }
+  # height.fd
+  cond_dens3 = function(x, alphas){
+    out = numeric(length(x))
+    for (i in 1:length(x)){
+      out[i] = sum(alphas*(sn::dsn(x[i], xi = xi, omega = omega, alpha = al)))
+    }
+    return(out)
+  }
+     
+  # calculatig normal pseudo residuals 
+  ts = (1:nrow(X))[which(!is.na(X$step))]
+  n1 = rep(NA, nrow(X))
+  for (t in ts){
+    u = integrate(cond_dens, lower = 0, upper = X$step[t], alphas = alpha_matrix[t,])
+    n1[t] = qnorm(u$value)
+  }
+  ts = (1:nrow(X))[which(!is.na(X$angle))]
+  n2 = rep(NA, nrow(X))
+  for (t in ts){
+    u = integrate(cond_dens2, lower = 0, upper = X$angle[t], alphas = alpha_matrix[t,])
+    n2[t] = qnorm(u$value)
+  }
+  ts = (1:nrow(X))[which(!is.na(X$height.fd))]
+  n3 = rep(NA, nrow(X))
+  for (t in ts){
+    u = integrate(cond_dens3, lower = -40, upper = X$height.fd[t], alphas = alpha_matrix[t,])
+    n3[t] = qnorm(u$value)
+  }
+  
+  out = as.data.frame(cbind(step = n1, angle = n2, height.fd = n3))
+  return(out)
+}
+
 
 
 
