@@ -653,6 +653,54 @@ mllk_mTPI = function(theta.star, X, N){
 }
 
 
+mllk_temp_mTPI = function(theta.star, X, N){
+  days = unique(X$day)
+  numdays = length(days)
+  coef = matrix(theta.star[1:(3*(N-1)*N)], (N-1)*N, 3)
+  mu.g = exp(theta.star[3*(N-1)*N+1:N])
+  sigma.g = exp(theta.star[3*(N-1)*N+N+1:N])
+  alpha = exp(theta.star[3*(N-1)*N+2*N+1:N])
+  beta = exp(theta.star[3*(N-1)*N+3*N+1:N])
+  xi = theta.star[3*(N-1)*N+4*N+1:N]
+  omega = exp(theta.star[3*(N-1)*N+5*N+1:N])
+  al = theta.star[3*(N-1)*N+6*N+1:N]
+  delta = c(1, exp(theta.star[3*(N-1)*N+7*N+1:(N-1)]))
+  delta = delta/sum(delta)
+  allprobs = matrix(1, nrow(X), N)
+  ind1 = which(!is.na(X$step) & !is.na(X$angle) & !is.na(X$height.fd))
+  ind2 = which(!is.na(X$step) & is.na(X$angle) & !is.na(X$height.fd))
+  
+  for (j in 1:N){ # allprobs matrix
+    allprobs[ind1,j] =
+      dgamma(X$step[ind1], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      dbeta(X$angle[ind1], shape1 = alpha[j], shape2 = beta[j])*
+      sn::dsn(X$height.fd[ind1], xi = xi[j], omega = omega[j], alpha = al[j])
+    allprobs[ind2,j] =
+      dgamma(X$step[ind2], shape = mu.g[j]^2/sigma.g[j]^2, scale = sigma.g[j]^2/mu.g[j])*
+      sn::dsn(X$height.fd[ind2], xi = xi[j], omega = omega[j], alpha = al[j])
+  }
+  
+  l = numeric(numdays)
+  for(i in 1:numdays){
+    index = which(X$day == days[i])
+    foo = delta%*%diag(allprobs[index[1],])
+    l[i] = log(sum(foo))
+    phi = foo/sum(foo)
+    for (t in 2:length(index)){
+      eta = coef[,1] + coef[,2]*X$temp[index[t]] + coef[,3]*X$mTPI[index[t]]
+      Gamma = diag(N)
+      Gamma[!Gamma] = exp(eta)
+      Gamma = Gamma/rowSums(Gamma)
+      foo = phi%*%Gamma%*%diag(allprobs[index[t],])
+      l[i] = l[i]+log(sum(foo))
+      phi = foo/sum(foo)
+    }
+  }
+  l = sum(l)
+  return(-l) 
+}
+
+
 
 
 
