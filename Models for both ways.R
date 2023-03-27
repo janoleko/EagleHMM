@@ -350,13 +350,15 @@ theta.star0.tm = c(theta0.tm[1:48],
                    log(theta0.tm[69:72]),
                    theta0.tm[73:79])
 
-cl = makeCluster(8); setDefaultCluster(cl=cl)
-t1 = Sys.time()
-mod_tm_bothways = optimParallel(par = theta.star0.tm, fn = mllk_tm, X = data7, N = 4, hessian = T, control = list(trace = 5, maxit = 10000))
-Sys.time()-t1
-stopCluster(cl)
+# cl = makeCluster(8); setDefaultCluster(cl=cl)
+# t1 = Sys.time()
+# mod_tm_bothways = optimParallel(par = theta.star0.tm, fn = mllk_tm, X = data7, N = 4, hessian = T, control = list(trace = 5, maxit = 10000))
+# Sys.time()-t1
+# stopCluster(cl)
+# 
+# saveRDS(mod_tm_bothways, "mod_tm_bothways.rds")
 
-saveRDS(mod_tm_bothways, "mod_tm_bothways.rds")
+mod_tm_bothways = readRDS("mod_tm_bothways.rds")
 
 theta.star = mod_tm_bothways$par
 
@@ -441,11 +443,12 @@ states_sub = data7 %>% filter(mTPI >= 175 & mTPI < 225) %>% select(states)
 stat11 = c(sum(states_sub == 1), sum(states_sub == 2), sum(states_sub == 3), sum(states_sub == 4))/nrow(states_sub)
 states_sub = data7 %>% filter(mTPI >= 225) %>% select(states)
 stat12 = c(sum(states_sub == 1), sum(states_sub == 2), sum(states_sub == 3), sum(states_sub == 4))/nrow(states_sub)
-stat_mTPI = cbind(stat1, stat2, stat3, stat4, stat5, stat6, stat7, stat8, stat9, stat10, stat11, stat12)
+stat_mTPI = cbind(stat2, stat3, stat4, stat5, stat6, stat7, stat8, stat9, stat10, stat11, stat12)
 
+par(mfrow = c(1,1))
 barplot(stat_mTPI, col = c("deepskyblue", "orange", "springgreen3", "dodgerblue"), space = 0.4,
         border = "white", ylim = c(0,1), bty = "n", xlab = "mTPI",
-        names.arg = c("-300", "-250", "-200", "-150 ", "-100", "-50", "0", "50", "100", "150", "200", "250"),
+        names.arg = c("-250", "-200", "-150 ", "-100", "-50", "0", "50", "100", "150", "200", "250"),
         ylab = "Proportion of time in state", main = "Time spent in each state for different values of mTPI")
 legend("right", inset = c(-0.15,0),
        col = c("deepskyblue", "orange", "springgreen3", "dodgerblue"), legend = c("state 1", "state 2", "state 3", "state 4"), pch = 16, box.col = "white")
@@ -453,17 +456,19 @@ legend("right", inset = c(-0.15,0),
 
 ## Flight budget for both ways
 
+par(mar = c(5, 4, 4, 6) + 0.1)
+
 states_sub = data7 %>% filter(day <= 110) %>% select(states)
 stat1 = c(sum(states_sub == 1), sum(states_sub == 2), sum(states_sub == 3), sum(states_sub == 4))/nrow(states_sub)
 states_sub = data7 %>% filter(day >= 187) %>% select(states)
 stat2 = c(sum(states_sub == 1), sum(states_sub == 2), sum(states_sub == 3), sum(states_sub == 4))/nrow(states_sub)
 stat = cbind(stat1, stat2)
 
-barplot(stat, col = c("deepskyblue", "orange", "springgreen3", "dodgerblue"), space = 0.4,
-        border = "white", ylim = c(0,1), bty = "n",
-        names.arg = c("first migration", "second migration"),
-        ylab = "Proportion of time in state", main = "Time spent in each state for different values of mTPI")
-legend("right", inset = c(-0.15,0),
+barplot(stat, col = c("deepskyblue", "orange", "springgreen3", "dodgerblue"), space = .5,
+        border = "white", ylim = c(0,1), bty = "n", xlim = c(0,4),
+        names.arg = c("autumn migration", "spring migration"),
+        ylab = "Proportion of time in state", main = "")
+legend("right",
        col = c("deepskyblue", "orange", "springgreen3", "dodgerblue"), legend = c("state 1", "state 2", "state 3", "state 4"), pch = 16, box.col = "white")
 
 
@@ -477,15 +482,15 @@ par(mfrow = c(1,3))
 
 ## histograms
 # step length
-hist(residuals$step, prob = T, xlim = c(-4,4), main = "step length", xlab = "step length", ylim = c(0, 0.5))
+hist(residuals$step, prob = T, xlim = c(-4,4), main = "step length", xlab = "step length", ylim = c(0, 0.5), border = "white")
 lines(density(na.omit(residuals$step), bw = 0.3), lwd = 2, col = "orange")
 curve(dnorm(x, mean(residuals$step, na.rm = T), sd(residuals$step, na.rm = T)), add = T, lwd = 2, lty = "dashed", n = 500)
 # turning angle
-hist(residuals$angle, prob = T, xlim = c(-4,4), breaks = 40, main = "turning angle", xlab = "turning angle", ylim = c(0, 0.6))
+hist(residuals$angle, prob = T, xlim = c(-4,4), breaks = 40, main = "turning angle", xlab = "turning angle", ylim = c(0, 0.6), border = "white")
 lines(density(na.omit(residuals$angle), bw = 0.55), lwd = 2, col = "orange")
 curve(dnorm(x, mean(residuals$angle, na.rm = T), sd(residuals$angle, na.rm = T)), add = T, lwd = 2, lty = "dashed", n = 500)
 # turning height.fd
-hist(residuals$height.fd, prob = T, xlim = c(-5,5), breaks = 30, main = "height difference", xlab = "height difference", ylim = c(0, 0.5))
+hist(residuals$height.fd, prob = T, xlim = c(-5,5), breaks = 30, main = "height difference", xlab = "height difference", ylim = c(0, 0.5), border = "white")
 lines(density(na.omit(residuals$height.fd), bw = 0.3), lwd = 2, col = "orange")
 curve(dnorm(x, mean(residuals$height.fd, na.rm = T), sd(residuals$height.fd, na.rm = T)), add = T, lwd = 2, lty = "dashed", n = 500)
 legend("topright",
@@ -553,3 +558,4 @@ theta.star = mod_temp_mTPI_bothways$par
 (BIC = 2*mod_temp_mTPI_bothways$value + log(nrow(data7))*length(theta.star))
 
 # testen mit 4 Kernen 
+

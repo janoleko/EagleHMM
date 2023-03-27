@@ -76,6 +76,7 @@ data2$step[which(data2$step == 0)] = runif(length(data2$step[which(data2$step ==
 
 
 
+
 # Plots -------------------------------------------------------------------
 dev.off()
 par(mfrow = c(3,1), mar = c(4.5,4,3,2))
