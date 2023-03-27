@@ -130,10 +130,14 @@ plot(data_aggr_mean$height.fd[16:200], type = "h", col = color[data_aggr_mean$la
 data_aggr_mean$height.fd[which(data_aggr_mean$height.fd > 20)] = NA
 
 
-hist(data_aggr_mean$step, prob = T, breaks = 200, ylim = c(0,0.1))
-hist(data_aggr_mean$angle, prob = T, breaks = 100)
-hist(data_aggr_mean$height.fd, prob = T, breaks = 500, xlim = c(-3,3))
+par(mfrow = c(1,3))
+hist(data_aggr_mean$step, prob = T, breaks = 50, ylim = c(0,0.4), main = "", border = "white")
+hist(data_aggr_mean$angle, prob = T, breaks = 50, border = "white", main = "")
+hist(data_aggr_mean$height.fd, prob = T, breaks = 50, xlim = c(-3,3), border = "white", main = "")
 
+hist(data2$step, breaks = 40, main = "", border = "white", prob = T, xlab = "step length", col = "grey")
+hist(data2$angle, breaks = 40, main = "", border = "white", prob = T, xlab = "turning angle", col = "grey")
+hist(data2$height.fd, breaks = 200, main = "", border = "white", prob = T, xlim = c(-3,3), ylim = c(0,1.5), xlab = "height difference", col = "grey")
 
 
 
@@ -250,6 +254,9 @@ plot(ider$location.long[601:630], ider$location.lat[601:630], pch = 20) #
 # plot(ider$location.long[721:750], ider$location.lat[721:750], pch = 20)
 plot(ider$location.long[751:780], ider$location.lat[751:780], pch = 20)
 plot(ider$location.long[781:810], ider$location.lat[781:810], pch = 20) #
+simply_scatter(ider$location.long[781:810], ider$location.lat[781:810], ider$height.above.msl[781:810],
+               xlab = "longitude", ylab = "latitude", zlab = "height above msl.")
+
 plot(ider$location.long[811:840], ider$location.lat[811:840], pch = 20)
 plot(ider$location.long[841:870], ider$location.lat[841:870], pch = 20)
 plot(ider$location.long[871:900], ider$location.lat[871:900], pch = 20)
