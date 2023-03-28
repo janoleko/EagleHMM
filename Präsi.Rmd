@@ -1,5 +1,4 @@
 ---
-title: "Flight modes"
 output: html_document
 ---
 
@@ -15,25 +14,24 @@ library(tidyverse)
 library(moveHMM)
 library(CircStats)
 library(devtools)
-# install_github("janoleko/simply3d)
 library(simply3d)
 
 # Load in the data --------------------------------------------------------
 setwd("/Users/jan-ole/R/HMM Project")
 ider = read.csv("Ider_annotated.csv")
-ider$height.fd = c(NA, diff(ider$height.above.msl))
+# ider$height.fd = c(NA, diff(ider$height.above.msl))
 
 
 ```
 
 ## Soaring
-```{r, echo = FALSE, warning = F}
+```{r, echo = FALSE, warning = F, fig.height=7.5}
 simply_scatter(ider$location.long[451:480], ider$location.lat[451:480], ider$height.above.msl[451:480],
                xlab = "longitude", ylab = "latitude", zlab = "height above msl.")
 ```
 ## Gliding
 
-```{r, echo = FALSE, warning = F}
+```{r, echo = FALSE, warning = F, fig.height=7.5}
 simply_scatter(ider$location.long[781:810], ider$location.lat[781:810], ider$height.above.msl[781:810],
                xlab = "longitude", ylab = "latitude", zlab = "height above msl.")
 ```
