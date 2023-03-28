@@ -8,6 +8,9 @@ library(gridExtra)
 color = c("deepskyblue", "orange", "springgreen3", "dodgerblue3")
 
 
+ggmap(get_map(location = c(75, 20, 110, 50), map_type = "toner", source = "stamen"))+
+  annotate("rect", xmin = 75, xmax = 110, ymin = 20, ymax = 50, fill = "white", alpha = 0.2)
+
 # overall
 ggmap(get_map(location = c(75, 20, 110, 50), map_type = "toner", source = "stamen"))+
   annotate("rect", xmin = 75, xmax = 110, ymin = 20, ymax = 50, fill = "white", alpha = 0.4)+
@@ -83,8 +86,23 @@ prj_dd <- "EPSG:4326"
 
 dev.off()
 
-loc <- data.frame(x = runif(30, min = 70, max = 110), y = runif(30, min = 20, max = 50))
-elevation_df <- get_elev_raster(loc, prj = prj_dd, z = 8)
-raster::plot(elevation_df, maxpixels = 10000000, xlab = "longitude", ylab = "latitude", bty = "n")
-points(data8$x, data8$y, pch = 20, col = "gray19")
+xlim = c(min(data8$x), max(data8$x))
+ylim = c(min(data8$y), max(data8$y))
+
+loc <- data.frame(x = runif(30, min = xlim[1], max = xlim[2]), y = runif(30, min = ylim[1], max = ylim[2]))
+elevation_df <- get_elev_raster(loc, prj = prj_dd, z = 7)
+raster::plot(elevation_df, maxpixels = 40000000, 
+             col = hcl.colors(n = 200, palette = "Viridis"),
+             xlab = "longitude", ylab = "latitude", bty = "n", xlim = xlim, ylim = ylim, bty = "n", npretty = 4)
+
+kde = MASS::kde2d(data8$x, data8$y, h = 5, n = 500)
+contour(kde, add = T, drawlabels = F, nlevels = 30, xlim = xlim, ylim = ylim, lwd = .7, col = "white")
+
+points(data8$x, data8$y, lwd = .5)
+points(data8$x, data8$y, pch = 20, col = "white")
+
+
+
+
+
 
