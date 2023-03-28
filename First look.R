@@ -130,12 +130,13 @@ plot(data_aggr_mean$height.fd[16:200], type = "h", col = color[data_aggr_mean$la
 data_aggr_mean$height.fd[which(data_aggr_mean$height.fd > 20)] = NA
 
 
-par(mfrow = c(1,3))
+
 hist(data_aggr_mean$step, prob = T, breaks = 50, ylim = c(0,0.4), main = "", border = "white")
 hist(data_aggr_mean$angle, prob = T, breaks = 50, border = "white", main = "")
 hist(data_aggr_mean$height.fd, prob = T, breaks = 50, xlim = c(-3,3), border = "white", main = "")
 
-hist(data2$step, breaks = 40, main = "", border = "white", prob = T, xlab = "step length", col = "grey")
+par(mfrow = c(1,1))
+hist(data2$step, breaks = 40, main = "", border = "white", prob = T, xlab = "step length", col = "grey", ylim = c(0,0.6))
 hist(data2$angle, breaks = 40, main = "", border = "white", prob = T, xlab = "turning angle", col = "grey")
 hist(data2$height.fd, breaks = 200, main = "", border = "white", prob = T, xlim = c(-3,3), ylim = c(0,1.5), xlab = "height difference", col = "grey")
 
